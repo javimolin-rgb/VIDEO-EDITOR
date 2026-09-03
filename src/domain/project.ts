@@ -1,6 +1,7 @@
 import { newId } from '@/lib/id';
 import { DEFAULT_TIMEBASE, secondsToFrames } from '@/lib/time';
 import {
+  DEFAULT_CAPTION_STYLE,
   PROJECT_SCHEMA_VERSION,
   type AspectRatioId,
   type Timeline,
@@ -27,6 +28,8 @@ function makeTrack(kind: TrackKind, index: number, name: string): Track {
     locked: false,
     hidden: false,
     height: kind === 'audio' ? 72 : 96,
+    gain: 1,
+    pan: 0,
   };
 }
 
@@ -43,6 +46,8 @@ export function createEmptyTimeline(fps: number): Timeline {
     ],
     clips: [],
     markers: [],
+    transitions: [],
+    captionLayer: { enabled: false, style: { ...DEFAULT_CAPTION_STYLE }, cues: [], sourceName: null },
     playheadFrame: 0,
     selectionRange: null,
   };

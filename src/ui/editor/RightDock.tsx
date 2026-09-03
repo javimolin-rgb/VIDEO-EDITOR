@@ -4,6 +4,8 @@ import { useUIStore, type RightPanel } from '@/state/uiStore';
 import { getClip } from '@/domain/timeline/operations';
 import type { AspectRatioId, ProjectVersion } from '@/domain/types';
 import { ASPECT_PRESETS } from '@/domain/project';
+import { ClipInspector } from './inspector/ClipInspector';
+import { TransitionInspector } from './inspector/TransitionInspector';
 
 const TABS: { id: RightPanel; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
@@ -36,96 +38,26 @@ export function RightDock() {
     </div>
   );
 }
-
 function Inspector() {
   const project = useProjectStore((s) => s.project);
   const assets = useProjectStore((s) => s.assets);
-  const mutate = useProjectStore((s) => s.mutate);
   const setAssetRole = useProjectStore((s) => s.setAssetRole);
   const selectedClipIds = useUIStore((s) => s.selectedClipIds);
   const selectedAssetId = useUIStore((s) => s.selectedAssetId);
+  const selectedTransitionId = useUIStore((s) => s.selectedTransitionId);
 
   if (!project) return null;
-  const clip = selectedClipIds.length === 1 ? getClip(project.timeline, selectedClipIds[0]!) : undefined;
 
+  const transition = selectedTransitionId
+    ? project.timeline.transitions.find((t) => t.id === selectedTransitionId)
+    : undefined;
+  if (transition) return <TransitionInspector transition={transition} />;
+
+  const clip =
+    selectedClipIds.length === 1 ? getClip(project.timeline, selectedClipIds[0]!) : undefined;
   if (clip) {
     const asset = assets.find((a) => a.id === clip.assetId);
-    const patch = (fn: (c: NonNullable<typeof clip>) => void, label: string) =>
-      mutate((draft) => {
-        const target = draft.timeline.clips.find((c) => c.id === clip.id);
-        if (target) fn(target);
-      }, label);
-
-    return (
-      <div>
-        <h3 style={{ marginBottom: 10 }}>{asset?.name ?? 'Clip'}</h3>
-        <div className="field">
-          <label>Label</label>
-          <input
-            value={clip.label ?? ''}
-            placeholder={asset?.name ?? ''}
-            onChange={(e) => patch((c) => (c.label = e.target.value || null), 'Rename clip')}
-          />
-        </div>
-        <div className="field">
-          <label>Opacity — {(clip.opacity * 100).toFixed(0)}%</label>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={clip.opacity}
-            onChange={(e) => patch((c) => (c.opacity = Number(e.target.value)), 'Set opacity')}
-          />
-        </div>
-        <div className="field">
-          <label>Gain — {(clip.gain * 100).toFixed(0)}%</label>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.01}
-            value={clip.gain}
-            onChange={(e) => patch((c) => (c.gain = Number(e.target.value)), 'Set gain')}
-          />
-        </div>
-        <div className="field">
-          <label>Speed — {clip.speed.toFixed(2)}×</label>
-          <input
-            type="range"
-            min={0.25}
-            max={3}
-            step={0.05}
-            value={clip.speed}
-            onChange={(e) => patch((c) => (c.speed = Number(e.target.value)), 'Set speed')}
-          />
-        </div>
-        <div className="field">
-          <label>Fades (frames)</label>
-          <div className="rowfields">
-            <input
-              type="number"
-              min={0}
-              value={clip.fadeInFrames}
-              onChange={(e) =>
-                patch((c) => (c.fadeInFrames = Math.max(0, Number(e.target.value))), 'Set fade in')
-              }
-            />
-            <input
-              type="number"
-              min={0}
-              value={clip.fadeOutFrames}
-              onChange={(e) =>
-                patch((c) => (c.fadeOutFrames = Math.max(0, Number(e.target.value))), 'Set fade out')
-              }
-            />
-          </div>
-        </div>
-        <div className="muted mono" style={{ fontSize: 11 }}>
-          src {clip.sourceIn}–{clip.sourceOut}f · timeline @{clip.timelineStart}f
-        </div>
-      </div>
-    );
+    return <ClipInspector clip={clip} assetName={asset?.name} />;
   }
 
   if (selectedClipIds.length > 1) {
@@ -181,7 +113,7 @@ function Inspector() {
     );
   }
 
-  return <div className="muted">Select a clip or an asset to see its properties.</div>;
+  return <div className="muted">Select a clip, transition or asset to see its properties.</div>;
 }
 
 function Activity() {

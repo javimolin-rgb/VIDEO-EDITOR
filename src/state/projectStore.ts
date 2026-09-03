@@ -9,6 +9,7 @@ import { newId } from '@/lib/id';
 import { createLogger } from '@/lib/logger';
 import { secondsToFrames, type Frame, type FrameRange } from '@/lib/time';
 import { cloneProject, createProject, type CreateProjectOptions } from '@/domain/project';
+import { migrateProject } from '@/domain/migrate';
 import {
   canRedo as histCanRedo,
   canUndo as histCanUndo,
@@ -22,7 +23,21 @@ import {
   type HistoryState,
 } from '@/domain/history/history';
 import * as tl from '@/domain/timeline/operations';
-import type { Asset, AssetRole, ProjectSettings, TrackKind, VideoProject } from '@/domain/types';
+import type {
+  AnimatableParam,
+  Asset,
+  AssetRole,
+  CaptionCue,
+  CaptionStyle,
+  Clip,
+  ProjectSettings,
+  TrackKind,
+  TransitionType,
+  VideoProject,
+} from '@/domain/types';
+import { currentParamValue, sampleParam } from '@/domain/keyframes';
+import { clipTimelineRange } from '@/domain/types';
+import { parseCaptions } from '@/video/captions';
 import { probeMedia } from '@/video/probe';
 import { configureAutosave, flushAutosave, scheduleAutosave } from '@/storage/autosave';
 import {
@@ -86,6 +101,28 @@ interface ProjectState {
   addTrack: (kind: TrackKind) => void;
   updateTrack: (trackId: string, patch: Parameters<typeof tl.updateTrack>[2]) => void;
   removeTrack: (trackId: string) => void;
+
+  // clip render properties (Phase 2)
+  patchClip: (clipId: string, recipe: (clip: Clip) => void, label: string) => void;
+  toggleKeyframe: (clipId: string, param: AnimatableParam) => void;
+  clearKeyframes: (clipId: string, param: AnimatableParam) => void;
+
+  // transitions (Phase 2)
+  addTransition: (
+    fromClipId: string,
+    toClipId: string,
+    type: TransitionType,
+    durationFrames: number,
+  ) => void;
+  updateTransition: (id: string, patch: Parameters<typeof tl.updateTransition>[2]) => void;
+  removeTransition: (id: string) => void;
+
+  // captions (Phase 2)
+  importCaptionsText: (text: string, sourceName: string) => void;
+  setCaptionsEnabled: (enabled: boolean) => void;
+  updateCaptionStyle: (patch: Partial<CaptionStyle>) => void;
+  updateCaptionCue: (id: string, patch: Partial<Pick<CaptionCue, 'text' | 'startFrame' | 'endFrame'>>) => void;
+  removeCaptionCue: (id: string) => void;
 
   // assets
   importFiles: (files: FileList | File[]) => Promise<void>;
@@ -169,13 +206,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   openSnapshot(project) {
+    const migrated = migrateProject(project);
     set({
       status: 'ready',
-      project,
-      history: initHistory(project, 'Recovered snapshot'),
+      project: migrated,
+      history: initHistory(migrated, 'Recovered snapshot'),
       dirty: true,
     });
-    scheduleAutosave(project);
+    scheduleAutosave(migrated);
   },
 
   async closeProject() {
@@ -339,6 +377,113 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     get().mutate((draft) => {
       draft.timeline = tl.removeTrack(draft.timeline, trackId);
     }, 'Remove track');
+  },
+
+  // ─── clip render properties (Phase 2) ─────────────────────────────────────
+
+  patchClip(clipId, recipe, label) {
+    get().mutate((draft) => {
+      const clip = draft.timeline.clips.find((c) => c.id === clipId);
+      if (clip) recipe(clip);
+    }, label);
+  },
+
+  toggleKeyframe(clipId, param) {
+    const project = get().project;
+    if (!project) return;
+    const clip = project.timeline.clips.find((c) => c.id === clipId);
+    if (!clip) return;
+    const localFrame = Math.max(0, project.timeline.playheadFrame - clipTimelineRange(clip).start);
+
+    get().mutate((draft) => {
+      const target = draft.timeline.clips.find((c) => c.id === clipId);
+      if (!target) return;
+      const list = [...(target.keyframes[param] ?? [])];
+      const existingIdx = list.findIndex((k) => k.frame === localFrame);
+      if (existingIdx >= 0) {
+        list.splice(existingIdx, 1);
+      } else {
+        const current = sampleParam(target, param, localFrame) ?? currentParamValue(target, param);
+        list.push({ frame: localFrame, value: current, easing: 'ease-in-out' });
+        list.sort((a, b) => a.frame - b.frame);
+      }
+      if (list.length === 0) delete target.keyframes[param];
+      else target.keyframes[param] = list;
+    }, `Keyframe ${param}`);
+  },
+
+  clearKeyframes(clipId, param) {
+    get().mutate((draft) => {
+      const target = draft.timeline.clips.find((c) => c.id === clipId);
+      if (target) delete target.keyframes[param];
+    }, `Clear ${param} keyframes`);
+  },
+
+  // ─── transitions (Phase 2) ───────────────────────────────────────────────
+
+  addTransition(fromClipId, toClipId, type, durationFrames) {
+    get().mutate((draft) => {
+      const res = tl.addTransition(draft.timeline, { fromClipId, toClipId, type, durationFrames });
+      draft.timeline = res.timeline;
+    }, `Add ${type} transition`);
+  },
+
+  updateTransition(id, patch) {
+    get().mutate((draft) => {
+      draft.timeline = tl.updateTransition(draft.timeline, id, patch);
+    }, 'Update transition');
+  },
+
+  removeTransition(id) {
+    get().mutate((draft) => {
+      draft.timeline = tl.removeTransition(draft.timeline, id);
+    }, 'Remove transition');
+  },
+
+  // ─── captions (Phase 2) ──────────────────────────────────────────────────
+
+  importCaptionsText(text, sourceName) {
+    const project = get().project;
+    if (!project) return;
+    const { cues, format } = parseCaptions(text, project.settings.fps);
+    if (cues.length === 0) {
+      set({ error: `No caption cues found in "${sourceName}".` });
+      return;
+    }
+    get().mutate((draft) => {
+      draft.timeline.captionLayer = {
+        ...draft.timeline.captionLayer,
+        enabled: true,
+        cues,
+        sourceName,
+      };
+    }, `Import ${cues.length} captions (${format})`, 'import');
+  },
+
+  setCaptionsEnabled(enabled) {
+    get().mutate((draft) => {
+      draft.timeline.captionLayer.enabled = enabled;
+    }, enabled ? 'Enable captions' : 'Disable captions');
+  },
+
+  updateCaptionStyle(patch) {
+    get().mutate((draft) => {
+      draft.timeline.captionLayer.style = { ...draft.timeline.captionLayer.style, ...patch };
+    }, 'Update caption style');
+  },
+
+  updateCaptionCue(id, patch) {
+    get().mutate((draft) => {
+      draft.timeline.captionLayer.cues = draft.timeline.captionLayer.cues.map((c) =>
+        c.id === id ? { ...c, ...patch } : c,
+      );
+    }, 'Edit caption');
+  },
+
+  removeCaptionCue(id) {
+    get().mutate((draft) => {
+      draft.timeline.captionLayer.cues = draft.timeline.captionLayer.cues.filter((c) => c.id !== id);
+    }, 'Delete caption');
   },
 
   // ─── assets ───────────────────────────────────────────────────────────────

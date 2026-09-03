@@ -6,35 +6,42 @@ A **local-first** professional video editor with an **extensible local generativ
 > usable offline; generative features are optional adapters over local models.
 
 This repository is being built in phases against
-[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phase 1 (Foundation) is implemented.**
+[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1 (Foundation) and 2
+(Professional editing) are implemented.**
 
 ---
 
-## What works today (Phase 1)
+## What works today (Phases 1–2)
 
 | Area | Status |
 | --- | --- |
-| Project system | ✅ create / open / duplicate / delete, IndexedDB persistence |
+| Project system | ✅ create / open / duplicate / delete, IndexedDB persistence, schema v2 + migration |
 | Autosave + crash recovery | ✅ debounced autosave, recovery snapshot prompt on reload |
 | Version history | ✅ named snapshots, restore into editor |
-| Media import | ✅ drag-drop / picker, real metadata + poster-frame probing (video/audio/image/caption) |
-| Multi-track timeline | ✅ video/audio/text/adjustment/caption tracks, frame-accurate model |
-| Timeline editing | ✅ add, move (cross-track), trim (both edges), split, delete, ripple-delete, duplicate, snapping, zoom, markers |
-| Preview | ✅ canvas compositor synced to the playhead, transport, spacebar, audio during playback |
-| Undo / redo | ✅ snapshot history, per-entry activity log (edit / import / ai) |
-| Inspector | ✅ per-clip opacity / gain / speed / fades / label; asset role + metadata |
-| Export | ✅ real-time canvas + WebAudio composite → **WebM (VP9/Opus)**, social presets |
-| Command palette | ✅ ⌘K, editing commands |
-| AI provider abstraction | ✅ capability-based interface, model router, **local provider is the default & fallback** |
-| Local model registry | ✅ catalogue (LTX-Video, Wan 2.1, HunyuanVideo, Whisper, Piper) with license / hardware data |
-| Hardware detection | ✅ OS / GPU vendor / cores / WebGPU / WebCodecs → recommended profile |
-| AI Studio & AI Setup | ✅ full layout with **honest disabled states** — nothing faked (spec §159/§160) |
+| Media import | ✅ drag-drop / picker, real metadata + poster-frame probing |
+| Multi-track timeline | ✅ video / audio / text / adjustment / caption tracks, frame-accurate |
+| Timeline editing | ✅ add, move (cross-track), trim, split, delete, ripple-delete, duplicate, snap, zoom, markers |
+| Transitions | ✅ dissolve · fade-to-colour · wipe · slide · zoom |
+| Effects | ✅ blur · sharpen · vignette · grain · grayscale · sepia · hue-rotate · brightness · invert (stackable) |
+| Transform / Colour | ✅ position / scale / rotation / anchor · exposure / contrast / saturation / temperature / tint |
+| Keyframes | ✅ opacity / gain / transform.\* / colour.\* with easing |
+| Adjustment layers | ✅ grade + effect everything below, in range |
+| Captions | ✅ SRT + WebVTT import (+ word timings), minimal / bold / boxed / karaoke |
+| Audio | ✅ per-clip gain / pan / fades (gain keyframeable), per-track mixer, offline mix |
+| Preview + final render | ✅ one shared compositor — WYSIWYG |
+| Export | ✅ offline **MP4 (H.264/AAC)** via WebCodecs + `mp4-muxer`; real-time **WebM** fallback |
+| Undo / redo | ✅ snapshot history, per-entry activity log |
+| Command palette | ✅ ⌘K |
+| AI provider abstraction | ✅ capability-based, model router, **local provider is default & fallback** |
+| Local model registry + hardware detection | ✅ catalogue with licenses; OS / GPU / WebGPU / WebCodecs profile |
+| AI Studio & AI Setup | ✅ full layout, **honest disabled states** — nothing faked (spec §159/§160) |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 
-Effects, transitions, keyframes, colour grading, caption styling, MP4/FFmpeg
-export, transcription, semantic search, TTS, and all generative video
-(T2V/I2V/V2V/extend/region-edit/AI Director). See the roadmap.
+Slip/slide/roll trims, parametric EQ / compressor / ducking, colour curves /
+HSL / LUTs / shot-match, compound clips, proxies; transcription, semantic
+search, TTS; all generative video (T2V/I2V/V2V/extend/region-edit/AI Director).
+See the roadmap.
 
 ---
 
@@ -68,7 +75,7 @@ UI (React)  ──►  State (zustand: project | ui)  ──►  Domain (pure, f
                                                        └─ history (snapshot undo/redo)
         ├──►  Storage (Dexie / IndexedDB: projects, assets, blobs, versions, recovery)
         ├──►  Video (probe, preview compositor)
-        ├──►  Export (real-time renderer → WebM)
+        ├──►  Export (shared compositor → WebCodecs MP4, or WebM fallback)
         └──►  AI  (provider abstraction · model registry · router · local provider)
                   └─ providers/local  ← default + fallback, never bypassed by an external API
 ```

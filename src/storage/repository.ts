@@ -6,6 +6,7 @@
 import { newId } from '@/lib/id';
 import { createLogger } from '@/lib/logger';
 import { cloneProject } from '@/domain/project';
+import { migrateProject } from '@/domain/migrate';
 import type { Asset, ProjectVersion, VideoProject } from '@/domain/types';
 import { db, type ProjectRow } from './db';
 
@@ -19,7 +20,8 @@ export async function listProjects(): Promise<ProjectRow[]> {
 
 export async function loadProject(id: string): Promise<VideoProject | null> {
   const row = await db.projects.get(id);
-  return row ? row.data : null;
+  if (!row) return null;
+  return migrateProject(row.data);
 }
 
 export async function saveProject(project: VideoProject): Promise<void> {
@@ -167,7 +169,7 @@ export async function writeRecovery(project: VideoProject): Promise<void> {
 
 export async function readRecovery(projectId: string): Promise<{ savedAt: number; data: VideoProject } | null> {
   const row = await db.recovery.get(projectId);
-  return row ? { savedAt: row.savedAt, data: row.data } : null;
+  return row ? { savedAt: row.savedAt, data: migrateProject(row.data) } : null;
 }
 
 export async function clearRecovery(projectId: string): Promise<void> {

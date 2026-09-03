@@ -78,25 +78,37 @@ Dexie DB `ai-video-editor`, tables: `projects`, `assets`, `blobs`
 (binary media, referenced by `blobKey`), `versions`, `recovery`. Everything is
 local; `navigator.storage.estimate()` feeds the storage breakdown (spec §92).
 
-## Video (spec §12)
+## Video (spec §12) — see `RENDERING.md`
 
 - `video/probe.ts` — import-time metadata + poster frame using `<video>` /
-  `<img>` / `<audio>`. Fields the browser can't report honestly (exact codec,
-  container fps) stay `null`.
-- `video/previewEngine.ts` — a pooled-media-element canvas compositor. One
-  `<video>`/`<img>` per asset, drawn at the playhead. During playback the
-  elements run so audio is heard; when paused they're seeked frame-exact. This
-  is intentionally simple; a WebCodecs/WebGPU implementation can replace it
-  behind the same class API (Phase 2).
+  `<img>` / `<audio>`. Fields the browser can't report honestly stay `null`.
+- `video/compositor.ts` — **the** frame renderer. `renderFrame()` composites
+  track stacking, per-clip transform + colour + effects, transitions,
+  adjustment layers and captions. Both the preview and the exporter call it via
+  a `VisualResolver`.
+- `video/previewEngine.ts` — media-element pool + a coalesced async render loop
+  that delegates drawing to `renderFrame`.
+- `video/captions.ts` — SRT/VTT parser + `drawCaptions`.
+
+## Domain render helpers
+
+- `domain/keyframes.ts` — easing + `evaluateKeyframes` + `currentParamValue`.
+- `domain/render/clipProperties.ts` — `resolveClipProps(clip, frame)` folds
+  base fields + keyframes + fades into one resolved struct; the compositor uses
+  only this, never raw keyframe math.
+- `domain/effects/registry.ts` — effect catalogue + param clamps.
 
 ## Export (spec §13)
 
-`export/exporter.ts` keeps **preview and final render separate**. Phase 1 does a
-real-time render: composite all visible visual clips (track order, opacity,
-fades) to a canvas, mix audio-bearing clips through a WebAudio graph
-(per-clip gain + fades), capture `canvas.captureStream()` + the audio
-destination with `MediaRecorder` → WebM. Phase 2 adds an offline
-WebCodecs/FFmpeg path with effects, transitions, keyframes and MP4 muxing.
+`export/exporter.ts` keeps **preview and final render separate** but sharing the
+compositor. Two paths, chosen automatically:
+
+- **MP4 / WebCodecs** (preferred): offline, frame-exact. `renderFrame` per
+  frame → `VideoEncoder` (H.264); audio mixed offline
+  (`export/audioMixer.ts`) → `AudioEncoder` (AAC); muxed with the bundled
+  `mp4-muxer` (no FFmpeg binary, no download).
+- **WebM / MediaRecorder**: real-time `captureStream` capture, fallback when
+  WebCodecs is unavailable.
 
 ## AI (spec §4, §5, §94, §99, §100, §201)
 

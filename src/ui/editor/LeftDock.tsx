@@ -1,5 +1,8 @@
 import { useUIStore, type LeftPanel } from '@/state/uiStore';
 import { MediaPanel } from './MediaPanel';
+import { EffectsPanel } from './panels/EffectsPanel';
+import { AudioPanel } from './panels/AudioPanel';
+import { TextPanel } from './panels/TextPanel';
 
 const TABS: { id: LeftPanel; label: string }[] = [
   { id: 'media', label: 'Media' },
@@ -9,17 +12,10 @@ const TABS: { id: LeftPanel; label: string }[] = [
   { id: 'text', label: 'Text' },
 ];
 
-const PHASE: Record<LeftPanel, string> = {
-  media: '',
-  generate: 'Generative tools live in the AI Studio workspace and unlock once a local model is installed (Phase 4).',
-  effects: 'Stackable effects, blur, grain, vignette and transitions arrive in Phase 2.',
-  audio: 'Gain, fades, EQ, noise reduction and ducking arrive in Phase 2. Basic per-clip gain and fades already work in the Inspector.',
-  text: 'Titles, lower-thirds and animated captions arrive in Phase 2.',
-};
-
 export function LeftDock() {
   const leftPanel = useUIStore((s) => s.leftPanel);
   const setLeftPanel = useUIStore((s) => s.setLeftPanel);
+  const setWorkspace = useUIStore((s) => s.setWorkspace);
 
   return (
     <div className="panel">
@@ -35,10 +31,18 @@ export function LeftDock() {
         ))}
       </div>
       <div className="panel-body">
-        {leftPanel === 'media' ? (
-          <MediaPanel />
-        ) : (
-          <div className="notice">{PHASE[leftPanel]}</div>
+        {leftPanel === 'media' && <MediaPanel />}
+        {leftPanel === 'effects' && <EffectsPanel />}
+        {leftPanel === 'audio' && <AudioPanel />}
+        {leftPanel === 'text' && <TextPanel />}
+        {leftPanel === 'generate' && (
+          <div className="notice">
+            Generative tools live in the AI Studio workspace and unlock once a local model is
+            installed (Phase 4).
+            <div style={{ marginTop: 8 }}>
+              <button onClick={() => setWorkspace('studio')}>Open AI Studio</button>
+            </div>
+          </div>
         )}
       </div>
     </div>

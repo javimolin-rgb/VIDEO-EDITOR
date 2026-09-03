@@ -9,11 +9,15 @@ import { newId } from '@/lib/id';
 import { clampFrame, quantize, type Frame, type FrameRange } from '@/lib/time';
 import {
   clipTimelineRange,
+  IDENTITY_TRANSFORM,
+  NEUTRAL_COLOR,
   type Clip,
   type Marker,
   type Timeline,
   type Track,
   type TrackKind,
+  type Transition,
+  type TransitionType,
 } from '@/domain/types';
 
 const MIN_CLIP_FRAMES = 1;
@@ -104,9 +108,14 @@ export function addClip(timeline: Timeline, params: AddClipParams): { timeline: 
     sourceOut: Math.max(quantize(params.sourceIn) + MIN_CLIP_FRAMES, quantize(params.sourceOut)),
     speed: 1,
     gain: 1,
+    pan: 0,
     opacity: 1,
     fadeInFrames: 0,
     fadeOutFrames: 0,
+    transform: { ...IDENTITY_TRANSFORM },
+    color: { ...NEUTRAL_COLOR },
+    effects: [],
+    keyframes: {},
     label: params.label ?? null,
   };
 
@@ -213,14 +222,29 @@ export function splitClip(
   };
   left.fadeOutFrames = 0;
 
+  // An outgoing transition on the original clip now belongs to the right half.
+  const transitions = timeline.transitions.map((t) =>
+    t.fromClipId === clip.id ? { ...t, fromClipId: right.id } : t,
+  );
+
   return {
-    timeline: { ...timeline, clips: [...timeline.clips.filter((c) => c.id !== clip.id), left, right] },
+    timeline: {
+      ...timeline,
+      clips: [...timeline.clips.filter((c) => c.id !== clip.id), left, right],
+      transitions,
+    },
     newClipId: right.id,
   };
 }
 
 export function removeClip(timeline: Timeline, clipId: string): Timeline {
-  return replaceClip(timeline, clipId, null);
+  const next = replaceClip(timeline, clipId, null);
+  return {
+    ...next,
+    transitions: next.transitions.filter(
+      (t) => t.fromClipId !== clipId && t.toClipId !== clipId,
+    ),
+  };
 }
 
 /**
@@ -239,7 +263,13 @@ export function rippleDeleteClip(timeline: Timeline, clipId: string): Timeline {
         ? { ...c, timelineStart: Math.max(0, c.timelineStart - gap) }
         : c,
     );
-  return { ...timeline, clips };
+  return {
+    ...timeline,
+    clips,
+    transitions: timeline.transitions.filter(
+      (t) => t.fromClipId !== clipId && t.toClipId !== clipId,
+    ),
+  };
 }
 
 export function duplicateClip(
@@ -252,6 +282,109 @@ export function duplicateClip(
   const start = findFreeSlot(timeline, clip.trackId, clipTimelineRange(clip).end, length);
   const copy: Clip = { ...clip, id: newId('clip'), timelineStart: start };
   return { timeline: growToFitContent({ ...timeline, clips: [...timeline.clips, copy] }), newClipId: copy.id };
+}
+
+// ─── Transitions (spec §108) ────────────────────────────────────────────────
+
+const MIN_TRANSITION_FRAMES = 2;
+
+export function transitionsForClip(timeline: Timeline, clipId: string): Transition[] {
+  return timeline.transitions.filter((t) => t.fromClipId === clipId || t.toClipId === clipId);
+}
+
+/**
+ * Add a transition across the boundary between two clips on the same track.
+ * If the clips do not already overlap by `durationFrames`, the incoming clip
+ * (and everything after it on that track) is rippled left to create the
+ * overlap the transition plays across.
+ */
+export function addTransition(
+  timeline: Timeline,
+  params: {
+    fromClipId: string;
+    toClipId: string;
+    type: TransitionType;
+    durationFrames: Frame;
+    params?: Record<string, number | string>;
+  },
+): { timeline: Timeline; transitionId: string | null } {
+  const from = getClip(timeline, params.fromClipId);
+  const to = getClip(timeline, params.toClipId);
+  if (!from || !to || from.trackId !== to.trackId || from.id === to.id) {
+    return { timeline, transitionId: null };
+  }
+
+  const fromRange = clipTimelineRange(from);
+  const toRange = clipTimelineRange(to);
+  // `from` must be the earlier clip.
+  if (fromRange.start > toRange.start) return { timeline, transitionId: null };
+
+  const duration = Math.max(MIN_TRANSITION_FRAMES, quantize(params.durationFrames));
+  const currentOverlap = fromRange.end - toRange.start;
+  const shortfall = duration - currentOverlap;
+
+  let clips = timeline.clips;
+  if (shortfall > 0) {
+    // Don't let `to` pass the start of `from`.
+    const maxShift = toRange.start - (fromRange.start + MIN_CLIP_FRAMES);
+    const shift = Math.min(shortfall, Math.max(0, maxShift));
+    if (shift <= 0) return { timeline, transitionId: null };
+    clips = clips.map((c) =>
+      c.trackId === to.trackId && c.timelineStart >= toRange.start
+        ? { ...c, timelineStart: c.timelineStart - shift }
+        : c,
+    );
+  }
+
+  const transition: Transition = {
+    id: newId('clip'),
+    trackId: from.trackId,
+    fromClipId: from.id,
+    toClipId: to.id,
+    type: params.type,
+    durationFrames: duration,
+    params: params.params ?? {},
+  };
+
+  return {
+    timeline: {
+      ...timeline,
+      clips,
+      transitions: [
+        ...timeline.transitions.filter(
+          (t) => !(t.fromClipId === from.id && t.toClipId === to.id),
+        ),
+        transition,
+      ],
+    },
+    transitionId: transition.id,
+  };
+}
+
+export function updateTransition(
+  timeline: Timeline,
+  transitionId: string,
+  patch: Partial<Pick<Transition, 'type' | 'durationFrames' | 'params'>>,
+): Timeline {
+  return {
+    ...timeline,
+    transitions: timeline.transitions.map((t) =>
+      t.id === transitionId
+        ? {
+            ...t,
+            ...patch,
+            durationFrames:
+              patch.durationFrames != null
+                ? Math.max(MIN_TRANSITION_FRAMES, quantize(patch.durationFrames))
+                : t.durationFrames,
+          }
+        : t,
+    ),
+  };
+}
+
+export function removeTransition(timeline: Timeline, transitionId: string): Timeline {
+  return { ...timeline, transitions: timeline.transitions.filter((t) => t.id !== transitionId) };
 }
 
 // ─── Playhead / selection / markers ──────────────────────────────────────────
@@ -291,6 +424,8 @@ export function addTrack(timeline: Timeline, kind: TrackKind): { timeline: Timel
     locked: false,
     hidden: false,
     height: kind === 'audio' ? 72 : 96,
+    gain: 1,
+    pan: 0,
   };
   return { timeline: { ...timeline, tracks: [...timeline.tracks, track] }, trackId: track.id };
 }

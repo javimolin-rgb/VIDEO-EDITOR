@@ -22,6 +22,7 @@ interface UIState {
 
   selectedClipIds: string[];
   selectedAssetId: string | null;
+  selectedTransitionId: string | null;
   activeTrackId: string | null;
 
   /** Timeline horizontal zoom, in pixels per frame. */
@@ -42,6 +43,7 @@ interface UIState {
   selectClips: (ids: string[], additive?: boolean) => void;
   clearClipSelection: () => void;
   selectAsset: (id: string | null) => void;
+  selectTransition: (id: string | null) => void;
   setActiveTrack: (id: string | null) => void;
 
   setZoom: (pxPerFrame: number) => void;
@@ -69,6 +71,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   selectedClipIds: [],
   selectedAssetId: null,
+  selectedTransitionId: null,
   activeTrackId: null,
 
   pxPerFrame: 0.4,
@@ -89,9 +92,12 @@ export const useUIStore = create<UIState>((set) => ({
       selectedClipIds: additive
         ? Array.from(new Set([...s.selectedClipIds, ...ids]))
         : ids,
+      selectedTransitionId: null,
     })),
   clearClipSelection: () => set({ selectedClipIds: [] }),
   selectAsset: (selectedAssetId) => set({ selectedAssetId }),
+  selectTransition: (selectedTransitionId) =>
+    set({ selectedTransitionId, selectedClipIds: [] }),
   setActiveTrack: (activeTrackId) => set({ activeTrackId }),
 
   setZoom: (pxPerFrame) =>

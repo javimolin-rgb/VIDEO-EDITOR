@@ -7,7 +7,7 @@
 
 import type { Timebase, Frame, FrameRange } from '@/lib/time';
 
-export const PROJECT_SCHEMA_VERSION = 1 as const;
+export const PROJECT_SCHEMA_VERSION = 2 as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Assets (spec §14, §214)
@@ -96,6 +96,173 @@ export interface Track {
   locked: boolean;
   hidden: boolean;
   height: number;
+  /** Audio track mixing (spec §53). 1 = unity; ignored for non-audio tracks. */
+  gain: number;
+  /** -1 (L) .. 1 (R). */
+  pan: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2 — transform, colour, effects, keyframes (spec §63, §106, §107, §110)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 2D placement of a visual clip in project-resolution space. */
+export interface Transform {
+  /** Offset from centre, in project pixels. */
+  x: number;
+  y: number;
+  /** 1 = the clip's natural "contain" fit inside the frame. */
+  scale: number;
+  /** Degrees, clockwise. */
+  rotation: number;
+  /** Rotation/scale anchor, 0..1 within the clip's fitted box. */
+  anchorX: number;
+  anchorY: number;
+}
+
+export const IDENTITY_TRANSFORM: Transform = {
+  x: 0,
+  y: 0,
+  scale: 1,
+  rotation: 0,
+  anchorX: 0.5,
+  anchorY: 0.5,
+};
+
+/** Primary colour correction, applied before effects (spec §63). */
+export interface ColorGrade {
+  enabled: boolean;
+  /** All roughly -1..1, 0 = unchanged. */
+  exposure: number;
+  contrast: number;
+  saturation: number;
+  temperature: number;
+  tint: number;
+}
+
+export const NEUTRAL_COLOR: ColorGrade = {
+  enabled: false,
+  exposure: 0,
+  contrast: 0,
+  saturation: 0,
+  temperature: 0,
+  tint: 0,
+};
+
+export type EffectType =
+  | 'gaussian-blur'
+  | 'sharpen'
+  | 'vignette'
+  | 'grain'
+  | 'grayscale'
+  | 'sepia'
+  | 'hue-rotate'
+  | 'brightness'
+  | 'invert';
+
+export interface EffectInstance {
+  id: string;
+  type: EffectType;
+  enabled: boolean;
+  /** Effect-specific scalar params; see `domain/effects/registry.ts`. */
+  params: Record<string, number>;
+}
+
+export type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'hold';
+
+export interface Keyframe {
+  /** Frame relative to the clip's own start. */
+  frame: Frame;
+  value: number;
+  /** Interpolation from this keyframe to the next. */
+  easing: Easing;
+}
+
+/** Parameters that can be animated with keyframes (spec §106). */
+export type AnimatableParam =
+  | 'opacity'
+  | 'gain'
+  | 'transform.x'
+  | 'transform.y'
+  | 'transform.scale'
+  | 'transform.rotation'
+  | 'color.exposure'
+  | 'color.contrast'
+  | 'color.saturation';
+
+export type ClipKeyframes = Partial<Record<AnimatableParam, Keyframe[]>>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Transitions (spec §42, §108) — standard (non-generative) set for Phase 2
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TransitionType = 'dissolve' | 'fade-color' | 'wipe' | 'slide' | 'zoom';
+
+export interface Transition {
+  id: string;
+  trackId: string;
+  /** The outgoing clip (ends into the transition). */
+  fromClipId: string;
+  /** The incoming clip (starts out of the transition). */
+  toClipId: string;
+  type: TransitionType;
+  /** Length of the overlap the transition plays across. */
+  durationFrames: Frame;
+  params: Record<string, number | string>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Captions (spec §50, §51, §52)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CaptionWord {
+  text: string;
+  startFrame: Frame;
+  endFrame: Frame;
+}
+
+export interface CaptionCue {
+  id: string;
+  startFrame: Frame;
+  endFrame: Frame;
+  text: string;
+  /** Populated when the source (VTT) carries inline word timings. */
+  words?: CaptionWord[];
+}
+
+export type CaptionPreset = 'minimal' | 'bold' | 'boxed' | 'karaoke';
+
+export interface CaptionStyle {
+  preset: CaptionPreset;
+  fontFamily: string;
+  fontSizePct: number; // % of frame height
+  color: string;
+  highlightColor: string;
+  backgroundColor: string;
+  /** Vertical anchor, 0 (top) .. 1 (bottom). */
+  position: number;
+  uppercase: boolean;
+  maxCharsPerLine: number;
+}
+
+export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
+  preset: 'bold',
+  fontFamily: 'Inter, system-ui, sans-serif',
+  fontSizePct: 5.5,
+  color: '#ffffff',
+  highlightColor: '#ffd60a',
+  backgroundColor: 'rgba(0,0,0,0.55)',
+  position: 0.82,
+  uppercase: false,
+  maxCharsPerLine: 38,
+};
+
+export interface CaptionLayer {
+  enabled: boolean;
+  style: CaptionStyle;
+  cues: CaptionCue[];
+  /** Where the cues came from, for the UI. */
+  sourceName: string | null;
 }
 
 /**
@@ -114,13 +281,23 @@ export interface Clip {
   sourceOut: Frame;
   /** Playback rate multiplier (1 = normal). Phase 2 wires the UI. */
   speed: number;
-  /** 0..1 constant gain for audio-bearing clips. Keyframes come in Phase 2. */
+  /** 0..2 base gain for audio-bearing clips; may be animated via `keyframes`. */
   gain: number;
-  /** 0..1 opacity for visual clips. */
+  /** -1 (L) .. 1 (R) constant pan for audio-bearing clips. */
+  pan: number;
+  /** 0..1 base opacity for visual clips; may be animated via `keyframes`. */
   opacity: number;
   /** Fade lengths in frames. */
   fadeInFrames: number;
   fadeOutFrames: number;
+  /** Placement of a visual clip within the frame (spec §110). */
+  transform: Transform;
+  /** Primary colour correction (spec §63). */
+  color: ColorGrade;
+  /** Ordered, stackable effects (spec §107). Rendered top-to-bottom. */
+  effects: EffectInstance[];
+  /** Per-parameter animation curves (spec §106). */
+  keyframes: ClipKeyframes;
   label: string | null;
 }
 
@@ -143,6 +320,10 @@ export interface Timeline {
   tracks: Track[];
   clips: Clip[];
   markers: Marker[];
+  /** Standard transitions across clip boundaries (spec §108). */
+  transitions: Transition[];
+  /** Single project caption layer (spec §50). */
+  captionLayer: CaptionLayer;
   playheadFrame: Frame;
   /** In/out selection on the ruler, half-open. Null when unset. */
   selectionRange: FrameRange | null;

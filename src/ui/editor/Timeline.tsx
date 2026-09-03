@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
-import { clipTimelineRange, type Clip } from '@/domain/types';
+import { clipTimelineRange, type Clip, type TransitionType } from '@/domain/types';
 import { contentEndFrame } from '@/domain/timeline/operations';
 import { formatClock } from '@/lib/time';
 
@@ -22,6 +22,7 @@ export function Timeline() {
   const addMarkerAtPlayhead = useProjectStore((s) => s.addMarkerAtPlayhead);
   const rippleDelete = useProjectStore((s) => s.rippleDelete);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
+  const addTransition = useProjectStore((s) => s.addTransition);
 
   const pxPerFrame = useUIStore((s) => s.pxPerFrame);
   const snapEnabled = useUIStore((s) => s.snapEnabled);
@@ -31,6 +32,8 @@ export function Timeline() {
   const setZoom = useUIStore((s) => s.setZoom);
   const selectedClipIds = useUIStore((s) => s.selectedClipIds);
   const selectClips = useUIStore((s) => s.selectClips);
+  const selectTransition = useUIStore((s) => s.selectTransition);
+  const selectedTransitionId = useUIStore((s) => s.selectedTransitionId);
   const setActiveTrack = useUIStore((s) => s.setActiveTrack);
   const activeTrackId = useUIStore((s) => s.activeTrackId);
 
@@ -130,6 +133,16 @@ export function Timeline() {
 
   const ticks = buildTicks(end, pxPerFrame, timeline.timebase.fps);
 
+  // Two selected clips on the same track, ordered by start → transition candidate.
+  const selectedPair = (() => {
+    if (selectedClipIds.length !== 2) return null;
+    const a = timeline.clips.find((c) => c.id === selectedClipIds[0]);
+    const b = timeline.clips.find((c) => c.id === selectedClipIds[1]);
+    if (!a || !b || a.trackId !== b.trackId) return null;
+    const [from, to] = a.timelineStart <= b.timelineStart ? [a, b] : [b, a];
+    return { from, to };
+  })();
+
   return (
     <div className="timeline">
       <div className="timeline-toolbar">
@@ -171,9 +184,28 @@ export function Timeline() {
         >
           Ripple delete
         </button>
+        <button
+          disabled={!selectedPair}
+          title="Add a transition across the boundary of the two selected clips"
+          onClick={() => {
+            if (selectedPair) {
+              addTransition(
+                selectedPair.from.id,
+                selectedPair.to.id,
+                'dissolve' as TransitionType,
+                Math.round(timeline.timebase.fps * 0.5),
+              );
+            }
+          }}
+        >
+          + Transition
+        </button>
         <div className="spacer" />
-        <button onClick={() => addTrack('video')}>+ Video track</button>
-        <button onClick={() => addTrack('audio')}>+ Audio track</button>
+        <button onClick={() => addTrack('video')}>+ Video</button>
+        <button onClick={() => addTrack('audio')}>+ Audio</button>
+        <button onClick={() => addTrack('adjustment')} title="Adjustment layer (spec §112)">
+          + Adjust
+        </button>
       </div>
 
       <div className="track-headers" style={{ overflowY: 'hidden' }}>
@@ -291,6 +323,29 @@ export function Timeline() {
                     frameFromClientX={frameFromClientX}
                   />
                 ))}
+
+                {timeline.transitions
+                  .filter((tr) => tr.trackId === track.id)
+                  .map((tr) => {
+                    const toClip = timeline.clips.find((c) => c.id === tr.toClipId);
+                    if (!toClip) return null;
+                    const left = clipTimelineRange(toClip).start * pxPerFrame;
+                    const width = Math.max(8, tr.durationFrames * pxPerFrame);
+                    return (
+                      <div
+                        key={tr.id}
+                        className={`transition-badge ${selectedTransitionId === tr.id ? 'selected' : ''}`}
+                        style={{ left, width }}
+                        title={`${tr.type} · ${tr.durationFrames}f`}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          selectTransition(tr.id);
+                        }}
+                      >
+                        ⇄
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}

@@ -18,15 +18,26 @@ export function PreviewPane() {
 
   const timeline = project?.timeline;
   const playhead = timeline?.playheadFrame ?? 0;
-  const clipSig = useMemo(
+
+  // A signature that changes whenever anything the compositor reads changes.
+  const renderSig = useMemo(
     () =>
-      timeline?.clips
-        .map((c) => `${c.id}:${c.assetId}:${c.timelineStart}:${c.sourceIn}:${c.sourceOut}`)
-        .join('|') ?? '',
+      timeline
+        ? JSON.stringify({
+            c: timeline.clips,
+            t: timeline.transitions,
+            k: timeline.tracks.map((x) => [x.id, x.hidden, x.index]),
+            cap: timeline.captionLayer,
+            bg: project?.settings.backgroundColor,
+          })
+        : '',
+    [timeline, project?.settings.backgroundColor],
+  );
+  const clipAssetSig = useMemo(
+    () => timeline?.clips.map((c) => c.assetId).join('|') ?? '',
     [timeline?.clips],
   );
 
-  // Create engine + attach canvas once.
   useEffect(() => {
     if (!canvasRef.current || !project) return;
     const engine = new PreviewEngine();
@@ -34,8 +45,8 @@ export function PreviewPane() {
       canvasRef.current,
       project.settings.resolution.width,
       project.settings.resolution.height,
-      project.settings.backgroundColor,
     );
+    engine.setProject(project);
     engineRef.current = engine;
     return () => {
       engine.dispose();
@@ -49,32 +60,28 @@ export function PreviewPane() {
     engineRef.current?.setResolution(
       project.settings.resolution.width,
       project.settings.resolution.height,
-      project.settings.backgroundColor,
     );
-  }, [project?.settings.resolution.width, project?.settings.resolution.height, project?.settings.backgroundColor, project]);
+    engineRef.current?.setProject(project);
+    engineRef.current?.requestRender(project.timeline.playheadFrame);
+  }, [project]);
 
-  // Keep media elements in sync with the clip set.
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || !timeline) return;
-    void engine.sync(assets, timeline.clips, getMediaUrl);
+    void engine.sync(assets, timeline.clips, getMediaUrl).then(() => engine.requestRender(playhead));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clipSig, assets]);
+  }, [clipAssetSig, assets]);
 
-  // Start/stop underlying media playback.
   useEffect(() => {
     const engine = engineRef.current;
-    if (!engine || !timeline) return;
-    engine.setPlaying(isPlaying, timeline);
+    if (!engine || !project) return;
+    engine.setPlaying(isPlaying, project);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
-  // Render the composite whenever the playhead or clip set changes.
   useEffect(() => {
-    const engine = engineRef.current;
-    if (!engine || !timeline) return;
-    engine.render(timeline, playhead);
-  }, [playhead, clipSig, timeline]);
+    engineRef.current?.requestRender(playhead);
+  }, [playhead, renderSig]);
 
   if (!project || !timeline) return null;
 

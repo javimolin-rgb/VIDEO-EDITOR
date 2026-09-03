@@ -506,6 +506,30 @@ a {
 .clip .handle.right {
   right: 0;
 }
+.transition-badge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(124, 92, 255, 0.15), var(--accent-2), rgba(124, 92, 255, 0.15));
+  border: 1px solid #fff;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  z-index: 5;
+  min-width: 16px;
+  overflow: hidden;
+}
+.transition-badge.selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.timeline-toolbar {
+  overflow-x: auto;
+}
 .playhead {
   position: absolute;
   top: 0;
