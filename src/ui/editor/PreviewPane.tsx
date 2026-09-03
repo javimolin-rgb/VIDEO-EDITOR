@@ -15,6 +15,7 @@ export function PreviewPane() {
   const setPlayhead = useProjectStore((s) => s.setPlayhead);
   const isPlaying = useUIStore((s) => s.isPlaying);
   const togglePlay = useUIStore((s) => s.togglePlay);
+  const setWorkspace = useUIStore((s) => s.setWorkspace);
 
   const timeline = project?.timeline;
   const playhead = timeline?.playheadFrame ?? 0;
@@ -91,6 +92,7 @@ export function PreviewPane() {
   if (!project || !timeline) return null;
 
   const end = Math.max(timeline.durationFrames, contentEndFrame(timeline));
+  const isEmpty = timeline.clips.length === 0;
 
   return (
     <div className="preview-pane">
@@ -103,6 +105,19 @@ export function PreviewPane() {
         >
           <canvas ref={canvasRef} />
         </div>
+        {isEmpty && (
+          <div className="preview-empty">
+            <div style={{ fontSize: 26, marginBottom: 8 }}>🎬</div>
+            <strong>The timeline is empty</strong>
+            <div className="muted" style={{ maxWidth: 340, marginTop: 6 }}>
+              Import a video or image on the left and drag it onto a track, or generate a clip in{' '}
+              <button className="ghost" style={{ padding: '1px 6px' }} onClick={() => setWorkspace('studio')}>
+                AI Studio
+              </button>
+              . The preview shows whatever sits under the playhead.
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="transport">

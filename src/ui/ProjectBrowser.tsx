@@ -36,6 +36,12 @@ export function ProjectBrowser() {
     await createSampleProject();
     setStudioView('storyboard');
     setWorkspace('studio');
+    pushToast('info', 'Generating the sample clips locally — this takes a few seconds.');
+    const gen = useGenStore.getState();
+    await gen.generateAllShots();
+    await gen.awaitStoryboardSettled();
+    gen.assembleStoryboard();
+    pushToast('success', 'Sample ready — switch to Edit to see the timeline.');
   };
 
   return (
