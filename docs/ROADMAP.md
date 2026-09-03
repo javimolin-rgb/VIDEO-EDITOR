@@ -10,8 +10,8 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | **3** | Local AI (on-device runtime, transcription, cleanup, search) | **done** |
 | **4** | Generative video (T2V/I2V, queue, QC, history, references) | **done** |
 | **5** | Advanced generation (storyboard, extend, look-match, auto-reframe, continuity) | **done** |
-| 6 | AI Director (script→storyboard→video, auto-edit, B-roll, campaign) | next |
-| 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | planned |
+| **6** | AI Director (brief/script → plan → run: storyboard, generate, assemble, colour, captions, B-roll) | **done** |
+| 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | next |
 | 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | planned |
 
 ## Phase 1 — Foundation ✅
@@ -203,12 +203,52 @@ Delivered — all local, all real:
 - [x] Auto-reframe produces a new clip at the target aspect with the subject
       kept in frame.
 
-## Phases 6–8
+## Phase 6 — AI Director ✅
+
+There is no LLM — the Director is a **deterministic planner** that composes
+the tools the app already has into an editable, numbered plan, shows it for
+approval, then runs it with a plain-language outcome per step (spec §18, §120,
+§194).
+
+- `ai/director/planner.ts` — `planFromBrief` (hook → product beats → CTA close,
+  export aspects from the platform) and `planFromScript` (`splitScriptBeats`
+  → one shot + one caption line per beat, CTA detection). `ai/director/brief.ts`
+  — `inferBrief` reads style / platform / duration from free text (spec §183).
+- `ai/director/broll.ts` — `extractVisualConcepts` pulls concrete noun phrases
+  from a narration line for generative B-roll (spec §43).
+- `state/directorStore.ts` — the executor. Steps: **analyse → build-storyboard
+  → generate-shots → qc-retry → assemble → captions → broll → color-match →
+  music/sfx (skipped honestly) → export-variants**. Reuses the Phase 4/5 queue,
+  QC, storyboard, look-match and caption engine — no new generation code.
+- **Autonomy levels** (spec §195): assisted (run each step), semi-auto
+  (approve, then run to completion, export left manual), auto (no confirm),
+  full-auto (everything incl. export).
+- `genStore.generateBroll` — for each caption cue: extract concepts → search
+  local media first (`searchProject`), place a match; otherwise generate a
+  short procedural B-roll clip onto the top video track at the cue's time
+  (spec §43). Also a ⌘K command.
+- UI: `ui/editor/studio/DirectorView.tsx` — a third Studio view. Brief form or
+  script box → **Build plan** → editable shot prompts + numbered steps with
+  live status and outcomes → **Approve & run** / **Discard**.
+
+### Phase 6 acceptance (spec §80, §126, §194, §263)
+
+- [x] A brief produces an editable plan; approving it builds a storyboard,
+      generates every shot, QC-checks, assembles the timeline and colour-matches
+      — each step reporting what it did. (verified live: "12s Aero X teaser" →
+      3 shots generated, assembled to the timeline, 4 clips colour-graded,
+      music step skipped honestly)
+- [x] A script produces one scene + one caption line per beat.
+- [x] Autonomy: assisted runs step-by-step; semi-auto runs to completion and
+      leaves export.
+- [x] Steps with no backend (music, SFX) are `skipped` with a reason, never
+      faked.
+
+## Phases 7–8
 
 Follow the master spec sections §20–§255. Every new capability appears in the UI
 only when it actually works; otherwise it stays a labelled disabled state
-(§257). Deferred within Phase 5's scope and now folded into later work: true
-diffusion V2V (environment/clothing/character swap), region-mask object
-replacement / inpainting, generative background replacement — each is a
-declared `VideoGenerationProvider` method, disabled until a runtime implements
-it.
+(§257). Still deferred until a diffusion runtime exists: true V2V
+(environment / clothing / character swap), region-mask object replacement /
+inpainting, generative background replacement — each a declared
+`VideoGenerationProvider` method.

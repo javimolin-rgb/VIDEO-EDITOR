@@ -58,7 +58,8 @@ export class PreviewEngine {
     const needed = new Set(clips.map((c) => c.assetId));
     for (const [id, p] of this.pool) {
       if (!needed.has(id)) {
-        URL.revokeObjectURL(p.url);
+        // The URL comes from the shared media-URL cache; that cache owns its
+        // lifecycle (revoked on project close). Only drop the element here.
         p.video?.remove();
         this.pool.delete(id);
       }
@@ -195,7 +196,7 @@ export class PreviewEngine {
   dispose(): void {
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     for (const p of this.pool.values()) {
-      URL.revokeObjectURL(p.url);
+      // URL lifecycle is owned by the shared media-URL cache.
       p.video?.remove();
     }
     this.pool.clear();

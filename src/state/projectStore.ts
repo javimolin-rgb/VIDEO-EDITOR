@@ -164,6 +164,7 @@ interface ProjectState {
   removeReference: (assetId: string) => void;
 
   // storyboard (spec §38)
+  setStoryboard: (shots: StoryboardShot[]) => void;
   addStoryboardShot: (partial?: Partial<StoryboardShot>) => void;
   updateStoryboardShot: (id: string, patch: Partial<Omit<StoryboardShot, 'id'>>) => void;
   /** Non-undoable shot update, for generation state transitions. */
@@ -799,6 +800,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     get().mutate((draft) => {
       draft.references = draft.references.filter((r) => r.assetId !== assetId);
     }, 'Remove reference');
+  },
+
+  setStoryboard(shots) {
+    get().mutate((draft) => {
+      draft.storyboard = shots;
+    }, 'Set storyboard', 'ai');
   },
 
   addStoryboardShot(partial) {

@@ -7,6 +7,7 @@ import { PromptForm } from './studio/PromptForm';
 import { ReferenceBoard } from './studio/ReferenceBoard';
 import { GenerationHistory } from './studio/GenerationHistory';
 import { StoryboardView } from './studio/StoryboardView';
+import { DirectorView } from './studio/DirectorView';
 import type { GenKind } from '@/ai/gen/queue';
 
 const MODES: Array<{ id: string; label: string; task: GenerativeTask; kind?: GenKind }> = [
@@ -72,6 +73,12 @@ export function StudioPanel() {
           >
             Storyboard
           </button>
+          <button
+            className={studioView === 'director' ? 'primary' : ''}
+            onClick={() => setStudioView('director')}
+          >
+            Director
+          </button>
         </div>
         <span className="spacer" />
         <span className="pill good">Procedural generator ready · local · no model</span>
@@ -80,6 +87,12 @@ export function StudioPanel() {
       {studioView === 'storyboard' && (
         <div style={{ marginTop: 14 }}>
           <StoryboardView />
+        </div>
+      )}
+
+      {studioView === 'director' && (
+        <div style={{ marginTop: 14 }}>
+          <DirectorView />
         </div>
       )}
 

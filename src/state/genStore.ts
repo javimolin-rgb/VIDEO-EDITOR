@@ -15,6 +15,8 @@ import { generationQueue, type GenJob, type GenKind } from '@/ai/gen/queue';
 import { clipTimelineRange } from '@/domain/types';
 import { clipsOnTrack, gapAt } from '@/domain/timeline/operations';
 import { orderedShots } from '@/domain/storyboard';
+import { extractVisualConcepts } from '@/ai/director/broll';
+import { searchProject } from '@/ai/search';
 import { ASPECT_PRESETS as ASPECTS } from '@/domain/project';
 import { framesToSeconds, secondsToFrames } from '@/lib/time';
 import { extractFrame, sampleLook } from '@/video/sampleFrames';
@@ -55,7 +57,7 @@ interface ReuseOffer {
   proceed: () => void;
 }
 
-export type StudioView = 'generate' | 'storyboard';
+export type StudioView = 'generate' | 'storyboard' | 'director';
 
 interface GenState {
   mode: GenKind;
@@ -96,6 +98,10 @@ interface GenState {
   matchLook: (clipId: string, referenceAssetId: string, strength: number) => Promise<boolean>;
   generateShot: (shotId: string) => Promise<void>;
   generateAllShots: () => Promise<void>;
+  /** Generative B-roll for caption cues (spec §43): search local first, else generate. */
+  generateBroll: () => Promise<{ matched: number; generated: number }>;
+  /** Resolves once every storyboard shot is `ready` or `failed`. */
+  awaitStoryboardSettled: (timeoutMs?: number) => Promise<void>;
   assembleStoryboard: () => void;
   analyzeContinuity: () => Promise<void>;
 }
@@ -563,6 +569,77 @@ export const useGenStore = create<GenState>((set, get) => {
       if (!project) return;
       for (const shot of orderedShots(project.storyboard)) {
         if (shot.state !== 'ready') await get().generateShot(shot.id);
+      }
+    },
+
+    async generateBroll() {
+      const project = activeProject();
+      if (!project) return { matched: 0, generated: 0 };
+      const store = useProjectStore.getState();
+      const cues = project.timeline.captionLayer.cues;
+      if (cues.length === 0) {
+        useProjectStore.setState({ error: 'Generate captions first — B-roll works from the caption/transcript lines.' });
+        return { matched: 0, generated: 0 };
+      }
+      const r = route('text-to-video');
+      if (!r.provider) return { matched: 0, generated: 0 };
+
+      // B-roll goes on the top video track (V2 by convention).
+      const brollTrack =
+        [...project.timeline.tracks].filter((t) => t.kind === 'video').sort((a, b) => a.index - b.index)[0];
+      if (!brollTrack) return { matched: 0, generated: 0 };
+
+      const aspect =
+        project.settings.aspectRatio === 'custom' ? '16:9' : project.settings.aspectRatio;
+      let matched = 0;
+      let generated = 0;
+
+      for (const cue of cues) {
+        const concepts = extractVisualConcepts(cue.text);
+        if (concepts.length === 0) continue;
+        const hits = searchProject(project, store.assets, store.transcript ?? null, concepts[0]!);
+        const assetHit = hits.find((h) => h.kind === 'asset' && h.assetId);
+        if (assetHit?.assetId) {
+          store.addClipFromAsset(assetHit.assetId, brollTrack.id, cue.startFrame);
+          matched++;
+          continue;
+        }
+        const durSec = Math.max(
+          1,
+          Math.min(8, (cue.endFrame - cue.startFrame) / project.settings.fps),
+        );
+        const { structured } = enhance(`${concepts.join(', ')}, b-roll, ${project.meta.aiInstructions || 'documentary'}`);
+        generationQueue.enqueue({
+          projectId: project.meta.id,
+          kind: 'text-to-video',
+          label: `B-roll · ${concepts[0]}`,
+          providerId: r.provider.id,
+          parentGenerationId: null,
+          placement: { trackId: brollTrack.id, atFrame: cue.startFrame },
+          storyboardShotId: null,
+          request: buildRequest(project.meta.id, {
+            structured,
+            durationSec: durSec,
+            fps: project.settings.fps,
+            resolution: project.settings.resolution,
+            aspectRatio: aspect,
+            seed: Math.floor(Math.random() * 2 ** 31),
+            references: referenceInputs(),
+            advanced: { quality: get().draft.quality },
+          }),
+        });
+        generated++;
+      }
+      return { matched, generated };
+    },
+
+    async awaitStoryboardSettled(timeoutMs = 180_000) {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        const sb = useProjectStore.getState().project?.storyboard ?? [];
+        if (sb.length === 0) return;
+        if (sb.every((s) => s.state === 'ready' || s.state === 'failed')) return;
+        await new Promise((r) => setTimeout(r, 400));
       }
     },
 

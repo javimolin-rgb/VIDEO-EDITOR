@@ -92,6 +92,19 @@ export function CommandPalette() {
         },
       },
       {
+        id: 'director',
+        title: 'Open AI Director',
+        run: () => {
+          useGenStore.getState().setStudioView('director');
+          ui().setWorkspace('studio');
+        },
+      },
+      {
+        id: 'broll',
+        title: 'Generate B-roll from captions',
+        run: () => void useGenStore.getState().generateBroll(),
+      },
+      {
         id: 'extend-clip',
         title: 'Extend selected clip (+3s)',
         run: () => {
