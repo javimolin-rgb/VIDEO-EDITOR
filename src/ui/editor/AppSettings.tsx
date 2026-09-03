@@ -4,6 +4,7 @@ import { useUIStore } from '@/state/uiStore';
 import { downloadDiagnostics } from '@/lib/diagnostics';
 import { getFps } from '@/lib/fps';
 import { useT } from '@/i18n';
+import { GitHubSync } from './GitHubSync';
 
 /** App-level appearance + accessibility + diagnostics (spec §143, §144, §246). */
 export function AppSettings() {
@@ -73,6 +74,8 @@ export function AppSettings() {
       </h4>
 
       {showDebug && <DebugBody />}
+
+      <GitHubSync />
     </div>
   );
 }
