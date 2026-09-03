@@ -7,6 +7,8 @@
 import { create } from 'zustand';
 import { newId } from '@/lib/id';
 import { createLogger } from '@/lib/logger';
+import type { AppError } from '@/lib/result';
+import { makeError } from '@/lib/errors';
 import { framesToSeconds, secondsToFrames, type Frame, type FrameRange } from '@/lib/time';
 import { cloneProject, createProject, type CreateProjectOptions } from '@/domain/project';
 import { migrateProject } from '@/domain/migrate';
@@ -82,10 +84,12 @@ interface ProjectState {
   dirty: boolean;
   lastSavedAt: number | null;
   importProgress: ImportProgress | null;
-  error: string | null;
+  error: AppError | string | null;
+  dismissError: () => void;
 
   // lifecycle
   newProject: (opts?: CreateProjectOptions) => Promise<string>;
+  createSampleProject: () => Promise<string>;
   openProject: (id: string) => Promise<void>;
   openSnapshot: (project: VideoProject) => void;
   closeProject: () => Promise<void>;
@@ -211,6 +215,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   lastSavedAt: null,
   importProgress: null,
   error: null,
+  dismissError: () => set({ error: null }),
   transcript: null,
   localJob: null,
 
@@ -225,8 +230,45 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       dirty: false,
       lastSavedAt: Date.now(),
       error: null,
+      transcript: null,
     });
     log.info('new project', { id: project.meta.id });
+    return project.meta.id;
+  },
+
+  /**
+   * Guided first project (spec §253): opens with a storyboard and a caption
+   * layer already sketched so a new user immediately sees the
+   * idea → generate → edit → export loop.
+   */
+  async createSampleProject() {
+    const project = createProject({ name: 'Sample · Mediterranean teaser', aspectRatio: '9:16' });
+    project.meta.aiInstructions = 'Warm late-afternoon light, slow camera moves, elegant pacing.';
+    project.storyboard = [
+      sb.createShot({ order: 0, title: 'Hook', prompt: 'rooftop at golden hour, city rooftops beyond, slow dolly in', camera: 'dolly-in', style: 'cinematic', durationSec: 4, carryContinuity: false }),
+      sb.createShot({ order: 1, title: 'Beat', prompt: 'linen fabric moving in the wind, warm backlight', camera: 'pan-right', style: 'editorial', durationSec: 4 }),
+      sb.createShot({ order: 2, title: 'Close', prompt: 'wide shot of the sea, sun low on the horizon', camera: 'crane-up', style: 'cinematic', durationSec: 4 }),
+    ];
+    project.timeline.captionLayer = {
+      ...project.timeline.captionLayer,
+      enabled: true,
+      sourceName: 'sample',
+      cues: [
+        { id: newId('marker'), startFrame: 0, endFrame: 60, text: 'A Mediterranean summer' },
+        { id: newId('marker'), startFrame: 90, endFrame: 150, text: 'Light, wind, and time' },
+      ],
+    };
+    await saveProject(project);
+    set({
+      status: 'ready',
+      project,
+      assets: [],
+      history: initHistory(project, 'Sample project'),
+      dirty: false,
+      lastSavedAt: Date.now(),
+      error: null,
+      transcript: null,
+    });
     return project.meta.id;
   },
 
@@ -637,7 +679,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       return;
     }
     if (!localRuntime.isInstalled(modelId)) {
-      set({ error: 'That speech model is not installed. Open AI Setup to download it.' });
+      set({ error: makeError('ai/model-not-installed') });
       return;
     }
 
@@ -730,7 +772,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         added.push(asset);
       } catch (e) {
         log.error('import failed', { name: file.name, error: e });
-        set({ error: `Could not import "${file.name}": ${String(e)}` });
+        set({ error: makeError('import/unsupported', file.name) });
       }
     }
 

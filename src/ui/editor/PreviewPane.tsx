@@ -19,20 +19,25 @@ export function PreviewPane() {
   const timeline = project?.timeline;
   const playhead = timeline?.playheadFrame ?? 0;
 
-  // A signature that changes whenever anything the compositor reads changes.
-  const renderSig = useMemo(
-    () =>
-      timeline
-        ? JSON.stringify({
-            c: timeline.clips,
-            t: timeline.transitions,
-            k: timeline.tracks.map((x) => [x.id, x.hidden, x.index]),
-            cap: timeline.captionLayer,
-            bg: project?.settings.backgroundColor,
-          })
-        : '',
-    [timeline, project?.settings.backgroundColor],
-  );
+  // A cheap signature that changes whenever anything the compositor reads
+  // changes — avoids JSON.stringify of the whole timeline on every render.
+  const renderSig = useMemo(() => {
+    if (!timeline) return '';
+    const clips = timeline.clips
+      .map(
+        (c) =>
+          `${c.id}${c.assetId}${c.trackId}${c.timelineStart},${c.sourceIn},${c.sourceOut},${c.speed},${c.opacity},${c.gain},${c.pan}` +
+          `|${JSON.stringify(c.transform)}${JSON.stringify(c.color)}${c.effects.length}${Object.keys(c.keyframes).length}` +
+          `|${c.fadeInFrames},${c.fadeOutFrames}`,
+      )
+      .join(';');
+    const tr = timeline.transitions.map((t) => `${t.id}${t.type}${t.durationFrames}`).join(',');
+    const tracks = timeline.tracks.map((x) => `${x.id}${x.hidden ? 1 : 0}${x.index}`).join(',');
+    const cap = timeline.captionLayer.enabled
+      ? `${timeline.captionLayer.cues.length}${timeline.captionLayer.style.preset}`
+      : '0';
+    return `${clips}#${tr}#${tracks}#${cap}#${project?.settings.backgroundColor ?? ''}`;
+  }, [timeline, project?.settings.backgroundColor]);
   const clipAssetSig = useMemo(
     () => timeline?.clips.map((c) => c.assetId).join('|') ?? '',
     [timeline?.clips],

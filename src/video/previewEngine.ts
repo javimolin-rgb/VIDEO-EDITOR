@@ -8,7 +8,9 @@
  */
 
 import { createLogger } from '@/lib/logger';
+import { markFrame } from '@/lib/fps';
 import { framesToSeconds } from '@/lib/time';
+import { isReducedMotion } from '@/state/settingsStore';
 import { clipTimelineRange, type Asset, type Clip, type VideoProject } from '@/domain/types';
 import { renderFrame, type Drawable, type VisualResolver } from './compositor';
 
@@ -127,8 +129,9 @@ export class PreviewEngine {
     try {
       await renderFrame(ctx, project, this.latestFrame, this.resolver, {
         awaitSeek: !this.playing,
-        grainSeed: this.playing ? (this.latestFrame % 60) + 1 : 7,
+        grainSeed: this.playing && !isReducedMotion() ? (this.latestFrame % 60) + 1 : 7,
       });
+      markFrame();
     } catch (e) {
       log.warn('preview render failed', e);
     } finally {

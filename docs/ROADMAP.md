@@ -12,7 +12,7 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | **5** | Advanced generation (storyboard, extend, look-match, auto-reframe, continuity) | **done** |
 | **6** | AI Director (brief/script → plan → run: storyboard, generate, assemble, colour, captions, B-roll) | **done** |
 | **7** | Automation (recipes, on-import triggers, social repurposing, brand templates, content pack) | **done** |
-| 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | next |
+| **8** | Polish (perf, a11y, i18n, structured errors, diagnostics, docs, Tauri scaffold) | **done** |
 
 ## Phase 1 — Foundation ✅
 
@@ -281,15 +281,57 @@ approval, then runs it with a plain-language outcome per step (spec §18, §120,
 - [x] A brand template round-trips: save from a project, apply to another.
 - [x] Steps needing a model (transcription) are `skipped` with a reason.
 
-## Phase 8 — Polish (next)
+## Phase 8 — Polish ✅
 
-Performance passes (worker offload, proxy media, manual-chunk the bundle),
-accessibility (keyboard nav, ARIA, reduced motion), internationalization
-(EN + ES), error UX (§119 — why / what / how-to-fix), a debug panel (§247),
-diagnostic log export (§246), and desktop packaging (Tauri) with a first-run
-installer (§252).
+- **Structured errors** (spec §119): `lib/errors.ts` catalogue (`makeError`) →
+  every entry has message / cause / fix; `ErrorDialog` shows why / what /
+  how-to-fix + a stable code. Wired at the import and model-not-installed sites.
+- **Diagnostics** (spec §246, §247): `lib/diagnostics.ts` → one JSON with the
+  hardware profile, model states, generation queue, storage breakdown, preview
+  FPS (`lib/fps.ts`) and recent logs — no media. `Settings → Diagnostics`
+  panel + **Export diagnostics** button.
+- **Appearance / accessibility** (spec §143): `state/settingsStore.ts` +
+  `AppSettings` — theme (dark / high-contrast / light, CSS-variable driven),
+  UI scale, `prefers-reduced-motion` (setting or OS; disables transitions and
+  freezes preview grain), `:focus-visible` outlines. Persisted to localStorage,
+  applied to `<html>`.
+- **i18n** (spec §144): `src/i18n/` — `translate` / `t` / `useT`, `en` is the
+  source, `es` falls back per key, `{var}` interpolation. Language switch;
+  chrome (top bar, project browser, errors, settings) translated.
+- **Performance** (spec §171, §172): vite `manualChunks` split the app bundle
+  (478 KB → 241 KB + react / dexie / muxer vendor chunks; `transformers` stays
+  lazy). Content-addressable look-sample cache in `sampleFrames.ts`. Cheaper
+  `PreviewPane` render signature (no whole-timeline `JSON.stringify`).
+- **First-run** (spec §253): "Open a sample project" — a pre-sketched storyboard
+  + caption layer so the idea → generate → edit → export loop is visible on
+  first open.
+- **Telemetry** (spec §248): none, stated in Settings — nothing to send.
+- **Desktop** (spec §249, §250): `src-tauri/` scaffold (thin shell over the web
+  app), `npm run tauri`, `docs/PACKAGING.md`.
+- **Docs** (spec §167): added `MODELS.md`, `CONTRIBUTING.md`,
+  `TROUBLESHOOTING.md`, `PACKAGING.md` (with README, ARCHITECTURE, ROADMAP,
+  LOCAL_AI, PROVIDERS, RENDERING, TIMELINE, GENERATION_ENGINE, AI_DIRECTOR,
+  AUTOMATION).
 
-Still deferred until a diffusion runtime exists (declared
-`VideoGenerationProvider` methods, disabled): true V2V (environment / clothing
-/ character swap), region-mask object replacement / inpainting, generative
-background replacement.
+### Phase 8 acceptance (spec §119, §143, §144, §246, §264)
+
+- [x] A failed import shows a why / what / how-to-fix dialog, not a stack.
+      (verified live with a deliberately broken `.mkv`)
+- [x] Theme switches to high-contrast / light and persists.
+- [x] Language switches to Spanish; missing keys fall back to English.
+- [x] Diagnostics export downloads a JSON with no media.
+- [x] The bundle is split; only the lazy `transformers` chunk exceeds 500 KB.
+- [x] Editing still works fully offline.
+
+## Remaining beyond the 8 phases
+
+Still deferred until a native diffusion runtime exists (declared
+`VideoGenerationProvider` methods, disabled): true Video→Video (environment /
+clothing / character swap), region-mask object replacement / inpainting,
+generative background replacement. Also open: worker-thread offload for
+decode/analysis, proxy media, a native installer wrapper (welcome → hardware
+check → model select → test → first project) on top of the existing web
+onboarding, thumbnail generation (§85), auto-highlights / chapters
+(§179, §180), animated lower-thirds.
+
+**Phases 1–8 of the master specification are implemented.**

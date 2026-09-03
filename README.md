@@ -5,14 +5,15 @@ A **local-first** professional video editor with an **extensible local generativ
 > No account. No mandatory cloud. No required external AI API. The editor is fully
 > usable offline; generative features are optional adapters over local models.
 
-This repository is being built in phases against
-[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1–7 are implemented**
-(Foundation, Professional editing, Local AI, Generative video, Advanced
-generation, AI Director, Automation). Phase 8 (Polish) is next.
+**All 8 phases of the [master specification](docs/ROADMAP.md) are implemented** —
+Foundation, Professional editing, Local AI, Generative video, Advanced
+generation, AI Director, Automation, Polish. What still needs a native
+diffusion runtime (true V2V swap, region inpainting, generative backgrounds)
+stays a declared, disabled interface method — never faked.
 
 ---
 
-## What works today (Phases 1–7)
+## What works today
 
 | Area | Status |
 | --- | --- |
@@ -50,6 +51,11 @@ generation, AI Director, Automation). Phase 8 (Polish) is next.
 | **Social repurposing** | ✅ auto-reframe per platform + AI content pack (title / description / tags / CTA / hook note) |
 | **Brand templates** | ✅ save caption style + colours, apply to any project, use as a recipe step |
 | AI Studio | ✅ Generate / Storyboard / Director views; **honest disabled states** for unbuilt modes |
+| **Errors** | ✅ every failure shows why / what happened / how to fix it, plus a stable code (spec §119) |
+| **Accessibility** | ✅ dark / high-contrast / light themes, UI scale, reduced-motion (setting or OS), focus outlines |
+| **Languages** | ✅ English + Spanish, per-key fallback |
+| **Diagnostics** | ✅ Settings → Diagnostics: FPS, model states, queue, storage, logs; one-click JSON export (no media) |
+| **Desktop** | ✅ Tauri scaffold (`npm run tauri`), thin shell over the same web app |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 

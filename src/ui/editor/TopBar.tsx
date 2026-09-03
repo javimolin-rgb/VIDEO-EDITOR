@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useT } from '@/i18n';
 import { ExportDialog } from './ExportDialog';
 
 export function TopBar() {
@@ -19,12 +20,13 @@ export function TopBar() {
   const setPalette = useUIStore((s) => s.setCommandPalette);
 
   const [exporting, setExporting] = useState(false);
+  const t = useT();
   if (!project) return null;
 
   return (
     <div className="topbar">
       <button className="ghost" onClick={() => void closeProject()} title="Back to projects">
-        ‹ Projects
+        ‹ {t('nav.projects')}
       </button>
       <input
         className="title"
@@ -39,10 +41,10 @@ export function TopBar() {
 
       <div className="row" style={{ gap: 4 }}>
         <button className="ghost" disabled={!canUndo} onClick={undo} title="Undo (Cmd/Ctrl+Z)">
-          Undo
+          {t('common.undo')}
         </button>
         <button className="ghost" disabled={!canRedo} onClick={redo} title="Redo (Shift+Cmd/Ctrl+Z)">
-          Redo
+          {t('common.redo')}
         </button>
       </div>
 
@@ -51,33 +53,38 @@ export function TopBar() {
           className={workspace === 'edit' ? 'primary' : 'ghost'}
           onClick={() => setWorkspace('edit')}
         >
-          Edit
+          {t('nav.edit')}
         </button>
         <button
           className={workspace === 'studio' ? 'primary' : 'ghost'}
           onClick={() => setWorkspace('studio')}
         >
-          AI Studio
+          {t('nav.studio')}
         </button>
         <button
           className={workspace === 'automation' ? 'primary' : 'ghost'}
           onClick={() => setWorkspace('automation')}
         >
-          Automation
+          {t('nav.automation')}
         </button>
         <button
           className={workspace === 'ai-setup' ? 'primary' : 'ghost'}
           onClick={() => setWorkspace('ai-setup')}
         >
-          AI Setup
+          {t('nav.aiSetup')}
         </button>
       </div>
 
-      <button className="ghost" onClick={() => setPalette(true)} title="Command palette (⌘K)">
+      <button
+        className="ghost"
+        onClick={() => setPalette(true)}
+        title={t('nav.commandPalette')}
+        aria-label={t('nav.commandPalette')}
+      >
         ⌘K
       </button>
       <button className="primary" onClick={() => setExporting(true)}>
-        Export
+        {t('nav.export')}
       </button>
 
       {exporting && <ExportDialog onClose={() => setExporting(false)} />}

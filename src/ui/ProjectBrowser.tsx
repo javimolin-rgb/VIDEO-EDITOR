@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useGenStore } from '@/state/genStore';
+import { useT } from '@/i18n';
 import { listProjects, deleteProject, duplicateProject } from '@/storage/repository';
 import type { ProjectRow } from '@/storage/db';
 import type { AspectRatioId } from '@/domain/types';
@@ -20,29 +22,39 @@ export function ProjectBrowser() {
   const [aspect, setAspect] = useState<AspectRatioId>('16:9');
   const [fps, setFps] = useState(30);
   const newProject = useProjectStore((s) => s.newProject);
+  const createSampleProject = useProjectStore((s) => s.createSampleProject);
   const openProject = useProjectStore((s) => s.openProject);
   const pushToast = useUIStore((s) => s.pushToast);
+  const setWorkspace = useUIStore((s) => s.setWorkspace);
+  const setStudioView = useGenStore((s) => s.setStudioView);
+  const t = useT();
 
   const refresh = () => void listProjects().then(setRows);
   useEffect(refresh, []);
+
+  const openSample = async () => {
+    await createSampleProject();
+    setStudioView('storyboard');
+    setWorkspace('studio');
+  };
 
   return (
     <div className="browser">
       <div className="row">
         <div>
-          <h1>AI Video Editor</h1>
-          <div className="sub">Local-first · your media never leaves this device</div>
+          <h1>{t('app.title')}</h1>
+          <div className="sub">{t('app.tagline')}</div>
         </div>
         <div className="spacer" />
+        <button onClick={() => void openSample()}>{t('browser.sampleProject')}</button>
         <button className="primary" onClick={() => setCreating(true)}>
-          + New project
+          + {t('browser.newProject')}
         </button>
       </div>
 
       {rows.length === 0 && (
         <div className="notice info" style={{ marginTop: 24 }}>
-          No projects yet. Create one to start importing footage and building a timeline. Everything
-          is stored locally in your browser (IndexedDB).
+          {t('browser.empty')}
         </div>
       )}
 

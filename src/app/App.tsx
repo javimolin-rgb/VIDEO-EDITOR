@@ -7,6 +7,7 @@ import { ProjectBrowser } from '@/ui/ProjectBrowser';
 import { EditorShell } from '@/ui/editor/EditorShell';
 import { Toasts } from '@/ui/Toasts';
 import { CommandPalette } from '@/ui/CommandPalette';
+import { ErrorDialog } from '@/ui/ErrorDialog';
 import type { VideoProject } from '@/domain/types';
 
 export function App() {
@@ -73,6 +74,7 @@ export function App() {
       )}
 
       <CommandPalette />
+      <ErrorDialog />
       <Toasts />
     </div>
   );

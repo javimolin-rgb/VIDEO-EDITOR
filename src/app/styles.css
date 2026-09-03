@@ -22,6 +22,66 @@
   color-scheme: dark;
 }
 
+/* High-contrast theme (spec §143) */
+:root[data-theme='high-contrast'] {
+  --bg-0: #000000;
+  --bg-1: #000000;
+  --bg-2: #0a0a0a;
+  --bg-3: #141414;
+  --line: #666666;
+  --line-strong: #999999;
+  --text-0: #ffffff;
+  --text-1: #f0f0f0;
+  --text-2: #cfcfcf;
+  --accent: #7ea8ff;
+  --accent-2: #b79bff;
+  --good: #58ff9a;
+  --warn: #ffc94d;
+  --bad: #ff8080;
+}
+
+/* Light theme */
+:root[data-theme='light'] {
+  --bg-0: #f4f5f7;
+  --bg-1: #ffffff;
+  --bg-2: #f0f1f4;
+  --bg-3: #e6e8ec;
+  --line: #d6d9df;
+  --line-strong: #b9bec7;
+  --text-0: #12151a;
+  --text-1: #414954;
+  --text-2: #6b7480;
+  --accent: #2f6df6;
+  --accent-2: #6b45e6;
+  --good: #1f9d6b;
+  --warn: #b26a00;
+  --bad: #d13438;
+  color-scheme: light;
+}
+
+/* Reduced motion (spec §143) — user setting or OS preference */
+:root[data-reduced-motion='true'] *,
+:root[data-reduced-motion='true'] *::before,
+:root[data-reduced-motion='true'] *::after {
+  transition-duration: 0.001ms !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 * {
   box-sizing: border-box;
 }

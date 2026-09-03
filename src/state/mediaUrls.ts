@@ -41,4 +41,5 @@ export function revokeAllMediaUrls(): void {
   for (const url of urls.values()) URL.revokeObjectURL(url);
   urls.clear();
   inflight.clear();
+  void import('@/video/sampleFrames').then((m) => m.clearLookCache());
 }

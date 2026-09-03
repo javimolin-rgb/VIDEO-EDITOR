@@ -47,29 +47,44 @@ function seek(video: HTMLVideoElement, t: number): Promise<void> {
 const W = 64;
 const H = 36;
 
+/** Content-addressable cache (spec §172): decoding + sampling is expensive and
+ *  the same asset/range is asked for by auto-colour, continuity and look-match. */
+const lookCache = new Map<string, LookStats | null>();
+export function clearLookCache(): void {
+  lookCache.clear();
+}
+
 export async function sampleLook(
   asset: Asset,
   opts: { startSec?: number; endSec?: number; frames?: number } = {},
 ): Promise<LookStats | null> {
   if (!asset.blobKey) return null;
+  const cacheKey = `${asset.id}:${opts.startSec ?? 0}:${opts.endSec ?? -1}:${opts.frames ?? 5}`;
+  if (lookCache.has(cacheKey)) return lookCache.get(cacheKey)!;
+
   const blob = await getAssetBlob(asset.blobKey);
   if (!blob) return null;
+
+  const finish = (v: LookStats | null): LookStats | null => {
+    lookCache.set(cacheKey, v);
+    return v;
+  };
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
+  if (!ctx) return finish(null);
 
   if (asset.kind === 'image') {
     const bmp = await createImageBitmap(blob).catch(() => null);
-    if (!bmp) return null;
+    if (!bmp) return finish(null);
     ctx.drawImage(bmp, 0, 0, W, H);
-    return statsFromImageData(ctx.getImageData(0, 0, W, H).data);
+    return finish(statsFromImageData(ctx.getImageData(0, 0, W, H).data));
   }
 
   const loaded = await loadVideo(blob).catch(() => null);
-  if (!loaded) return null;
+  if (!loaded) return finish(null);
   const { video, url } = loaded;
   try {
     const dur = Number.isFinite(video.duration) ? video.duration : 1;
@@ -84,7 +99,7 @@ export async function sampleLook(
       ctx.drawImage(video, 0, 0, W, H);
       stats.push(statsFromImageData(ctx.getImageData(0, 0, W, H).data));
     }
-    return stats.length ? averageStats(stats) : null;
+    return finish(stats.length ? averageStats(stats) : null);
   } finally {
     releaseVideo(video, url);
   }

@@ -6,6 +6,7 @@ import type { AspectRatioId, ProjectVersion } from '@/domain/types';
 import { ASPECT_PRESETS } from '@/domain/project';
 import { ClipInspector } from './inspector/ClipInspector';
 import { TransitionInspector } from './inspector/TransitionInspector';
+import { AppSettings } from './AppSettings';
 
 const TABS: { id: RightPanel; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
@@ -310,6 +311,8 @@ function Settings() {
           </div>
         ))}
       </div>
+
+      <AppSettings />
     </div>
   );
 }
