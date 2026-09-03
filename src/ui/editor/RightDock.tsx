@@ -9,6 +9,7 @@ import { TransitionInspector } from './inspector/TransitionInspector';
 
 const TABS: { id: RightPanel; label: string }[] = [
   { id: 'inspector', label: 'Inspector' },
+  { id: 'transcript', label: 'Transcript' },
   { id: 'activity', label: 'Activity' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -32,6 +33,7 @@ export function RightDock() {
       </div>
       <div className="panel-body">
         {rightPanel === 'inspector' && <Inspector />}
+        {rightPanel === 'transcript' && <Transcript />}
         {rightPanel === 'activity' && <Activity />}
         {rightPanel === 'settings' && <Settings />}
       </div>
@@ -114,6 +116,60 @@ function Inspector() {
   }
 
   return <div className="muted">Select a clip, transition or asset to see its properties.</div>;
+}
+
+function Transcript() {
+  const transcript = useProjectStore((s) => s.transcript);
+  const project = useProjectStore((s) => s.project);
+  const setPlayhead = useProjectStore((s) => s.setPlayhead);
+  const applyAsCaptions = useProjectStore((s) => s.applyTranscriptAsCaptions);
+  const clear = useProjectStore((s) => s.clearTranscript);
+  const pushToast = useUIStore((s) => s.pushToast);
+
+  if (!transcript || !project) {
+    return (
+      <div className="muted">
+        No transcript yet. Use <strong>Text → Generate captions from audio</strong> to run local
+        speech recognition on a clip.
+      </div>
+    );
+  }
+  const fps = project.settings.fps;
+
+  return (
+    <div>
+      <div className="row" style={{ marginBottom: 8 }}>
+        <span className="muted" style={{ fontSize: 11 }}>
+          {transcript.segments.length} segments · {transcript.modelId}
+        </span>
+        <span className="spacer" />
+        <button
+          className="ghost"
+          onClick={() => {
+            applyAsCaptions();
+            pushToast('success', 'Transcript applied as captions.');
+          }}
+        >
+          Use as captions
+        </button>
+        <button className="ghost danger" onClick={clear}>
+          Clear
+        </button>
+      </div>
+      <div className="col" style={{ gap: 2 }}>
+        {transcript.segments.map((seg) => (
+          <div
+            key={seg.id}
+            className="entry"
+            style={{ cursor: 'pointer', display: 'block' }}
+            onClick={() => setPlayhead(Math.round(seg.startSec * fps))}
+          >
+            <span className="time">{seg.startSec.toFixed(1)}s</span> {seg.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Activity() {

@@ -23,6 +23,9 @@ export function Timeline() {
   const rippleDelete = useProjectStore((s) => s.rippleDelete);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const addTransition = useProjectStore((s) => s.addTransition);
+  const detectShotsForClip = useProjectStore((s) => s.detectShotsForClip);
+  const localJob = useProjectStore((s) => s.localJob);
+  const pushToast = useUIStore((s) => s.pushToast);
 
   const pxPerFrame = useUIStore((s) => s.pxPerFrame);
   const snapEnabled = useUIStore((s) => s.snapEnabled);
@@ -170,6 +173,18 @@ export function Timeline() {
         </button>
         <button onClick={addMarkerAtPlayhead} title="Add marker (M)">
           Marker
+        </button>
+        <button
+          disabled={selectedClipIds.length !== 1 || localJob?.kind === 'shots'}
+          title="Detect shot boundaries in the selected video clip (local, no model)"
+          onClick={async () => {
+            const id = selectedClipIds[0];
+            if (!id) return;
+            const n = await detectShotsForClip(id, 0.45);
+            pushToast(n > 0 ? 'success' : 'info', n > 0 ? `Added ${n} shot markers.` : 'No cuts detected.');
+          }}
+        >
+          {localJob?.kind === 'shots' ? 'Analysing…' : 'Detect shots'}
         </button>
         <button
           disabled={selectedClipIds.length !== 1}

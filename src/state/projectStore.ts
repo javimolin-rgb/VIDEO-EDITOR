@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { newId } from '@/lib/id';
 import { createLogger } from '@/lib/logger';
-import { secondsToFrames, type Frame, type FrameRange } from '@/lib/time';
+import { framesToSeconds, secondsToFrames, type Frame, type FrameRange } from '@/lib/time';
 import { cloneProject, createProject, type CreateProjectOptions } from '@/domain/project';
 import { migrateProject } from '@/domain/migrate';
 import {
@@ -38,6 +38,13 @@ import type {
 import { currentParamValue, sampleParam } from '@/domain/keyframes';
 import { clipTimelineRange } from '@/domain/types';
 import { parseCaptions } from '@/video/captions';
+import { decodeAssetAudio, makeMonoBuffer, sliceMono, toMono } from '@/audio/decode';
+import { defaultSilenceParams, detectSilences, totalSilenceSec, type SilenceMode } from '@/audio/silence';
+import { detectShots } from '@/video/shots';
+import { getMediaUrl } from '@/state/mediaUrls';
+import { localRuntime } from '@/ai/local/runtime';
+import { transcriptToCues } from '@/ai/local/transcriptToCaptions';
+import type { TranscriptResult } from '@/ai/local/types';
 import { probeMedia } from '@/video/probe';
 import { configureAutosave, flushAutosave, scheduleAutosave } from '@/storage/autosave';
 import {
@@ -124,6 +131,20 @@ interface ProjectState {
   updateCaptionCue: (id: string, patch: Partial<Pick<CaptionCue, 'text' | 'startFrame' | 'endFrame'>>) => void;
   removeCaptionCue: (id: string) => void;
 
+  // local AI (Phase 3)
+  transcript: TranscriptResult | null;
+  localJob: { kind: string; progress: number; message: string } | null;
+  removeSilences: (clipId: string, mode: SilenceMode) => Promise<{ removedSec: number; cuts: number } | null>;
+  detectShotsForClip: (clipId: string, sensitivity: number) => Promise<number>;
+  transcribeClip: (
+    clipId: string,
+    modelId: string,
+    language: string | null,
+    alsoCaptions: boolean,
+  ) => Promise<void>;
+  applyTranscriptAsCaptions: () => void;
+  clearTranscript: () => void;
+
   // assets
   importFiles: (files: FileList | File[]) => Promise<void>;
   removeAsset: (assetId: string) => Promise<void>;
@@ -169,6 +190,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   lastSavedAt: null,
   importProgress: null,
   error: null,
+  transcript: null,
+  localJob: null,
 
   async newProject(opts) {
     const project = createProject(opts);
@@ -484,6 +507,175 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     get().mutate((draft) => {
       draft.timeline.captionLayer.cues = draft.timeline.captionLayer.cues.filter((c) => c.id !== id);
     }, 'Delete caption');
+  },
+
+  // ─── local AI (Phase 3) ──────────────────────────────────────────────────
+
+  async removeSilences(clipId, mode) {
+    const state = get();
+    const project = state.project;
+    if (!project) return null;
+    const clip = project.timeline.clips.find((c) => c.id === clipId);
+    const asset = clip && state.assets.find((a) => a.id === clip.assetId);
+    if (!clip || !asset?.blobKey) {
+      set({ error: 'That clip has no decodable audio.' });
+      return null;
+    }
+
+    set({ localJob: { kind: 'silence', progress: 0.2, message: 'Decoding audio…' } });
+    const buffer = await decodeAssetAudio(asset.blobKey);
+    if (!buffer) {
+      set({ localJob: null, error: 'Could not decode the clip audio.' });
+      return null;
+    }
+
+    const fps = project.settings.fps;
+    const mono = toMono(buffer);
+    const windowPcm = sliceMono(mono, buffer.sampleRate, clip.sourceIn / fps, clip.sourceOut / fps);
+    set({ localJob: { kind: 'silence', progress: 0.6, message: 'Scanning for silence…' } });
+
+    const regions = detectSilences(
+      makeMonoBuffer(windowPcm, buffer.sampleRate),
+      defaultSilenceParams(mode),
+    );
+    if (regions.length === 0) {
+      set({ localJob: null });
+      return { removedSec: 0, cuts: 0 };
+    }
+
+    // Silence seconds are relative to the clip's source window → timeline frames.
+    const clipRange = clipTimelineRange(clip);
+    const silentTimelineRanges: FrameRange[] = regions
+      .map((r) => ({
+        start: clipRange.start + Math.round((r.startSec * fps) / clip.speed),
+        end: clipRange.start + Math.round((r.endSec * fps) / clip.speed),
+      }))
+      .filter((r) => r.start > clipRange.start && r.end < clipRange.end && r.end > r.start);
+
+    get().mutate((draft) => {
+      const res = tl.removeSilencesFromClip(draft.timeline, clipId, silentTimelineRanges);
+      draft.timeline = res.timeline;
+    }, `Remove ${regions.length} silences`, 'ai');
+
+    set({ localJob: null });
+    return { removedSec: totalSilenceSec(regions), cuts: silentTimelineRanges.length };
+  },
+
+  async detectShotsForClip(clipId, sensitivity) {
+    const state = get();
+    const project = state.project;
+    if (!project) return 0;
+    const clip = project.timeline.clips.find((c) => c.id === clipId);
+    const asset = clip && state.assets.find((a) => a.id === clip.assetId);
+    if (!clip || !asset || asset.kind !== 'video' || !asset.blobKey) {
+      set({ error: 'Shot detection needs a video clip.' });
+      return 0;
+    }
+
+    set({ localJob: { kind: 'shots', progress: 0.1, message: 'Loading video…' } });
+    const url = await getMediaUrl(asset);
+    if (!url) {
+      set({ localJob: null });
+      return 0;
+    }
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true;
+    await new Promise<void>((r) => {
+      video.onloadeddata = () => r();
+      video.onerror = () => r();
+    });
+
+    const fps = project.settings.fps;
+    const startSec = clip.sourceIn / fps;
+    const endSec = clip.sourceOut / fps;
+    set({ localJob: { kind: 'shots', progress: 0.5, message: 'Analysing frames…' } });
+    const cutSecs = await detectShots(video, startSec, endSec, { sensitivity, sampleFps: 4 });
+    video.src = '';
+
+    const clipRange = clipTimelineRange(clip);
+    const frames = cutSecs.map(
+      (s) => clipRange.start + Math.round(((s - startSec) * fps) / clip.speed),
+    );
+    get().mutate((draft) => {
+      for (const f of frames) draft.timeline = tl.addMarker(draft.timeline, f, 'Shot');
+    }, `Detect ${frames.length} shots`, 'ai');
+
+    set({ localJob: null });
+    return frames.length;
+  },
+
+  async transcribeClip(clipId, modelId, language, alsoCaptions) {
+    const state = get();
+    const project = state.project;
+    if (!project) return;
+    const clip = project.timeline.clips.find((c) => c.id === clipId);
+    const asset = clip && state.assets.find((a) => a.id === clip.assetId);
+    if (!clip || !asset?.blobKey) {
+      set({ error: 'That clip has no audio to transcribe.' });
+      return;
+    }
+    if (!localRuntime.isInstalled(modelId)) {
+      set({ error: 'That speech model is not installed. Open AI Setup to download it.' });
+      return;
+    }
+
+    try {
+      set({ localJob: { kind: 'transcribe', progress: 0.05, message: 'Decoding audio…' } });
+      const buffer = await decodeAssetAudio(asset.blobKey);
+      if (!buffer) throw new Error('audio decode failed');
+      const fps = project.settings.fps;
+      const mono = sliceMono(toMono(buffer), buffer.sampleRate, clip.sourceIn / fps, clip.sourceOut / fps);
+
+      const result = await localRuntime.transcribe(mono, buffer.sampleRate, {
+        modelId,
+        language,
+        onProgress: (p, message) => set({ localJob: { kind: 'transcribe', progress: p, message } }),
+      });
+
+      set({ transcript: result, localJob: null });
+
+      if (alsoCaptions) {
+        const offsetSec = framesToSeconds(clipTimelineRange(clip).start, project.timeline.timebase);
+        const cues = transcriptToCues(result, {
+          offsetSec,
+          fps,
+          maxCharsPerLine: project.timeline.captionLayer.style.maxCharsPerLine,
+        });
+        get().mutate((draft) => {
+          draft.timeline.captionLayer = {
+            ...draft.timeline.captionLayer,
+            enabled: true,
+            cues,
+            sourceName: `transcribed (${modelId})`,
+          };
+        }, `Transcribe → ${cues.length} captions`, 'ai');
+      }
+    } catch (e) {
+      set({ localJob: null, error: `Transcription failed: ${String(e)}` });
+    }
+  },
+
+  applyTranscriptAsCaptions() {
+    const { project, transcript } = get();
+    if (!project || !transcript) return;
+    const cues = transcriptToCues(transcript, {
+      offsetSec: 0,
+      fps: project.settings.fps,
+      maxCharsPerLine: project.timeline.captionLayer.style.maxCharsPerLine,
+    });
+    get().mutate((draft) => {
+      draft.timeline.captionLayer = {
+        ...draft.timeline.captionLayer,
+        enabled: true,
+        cues,
+        sourceName: 'transcript',
+      };
+    }, `Transcript → ${cues.length} captions`, 'ai');
+  },
+
+  clearTranscript() {
+    set({ transcript: null });
   },
 
   // ─── assets ───────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { create } from 'zustand';
 
 export type Workspace = 'edit' | 'studio' | 'ai-setup';
 export type LeftPanel = 'media' | 'generate' | 'effects' | 'audio' | 'text';
-export type RightPanel = 'inspector' | 'activity' | 'settings';
+export type RightPanel = 'inspector' | 'transcript' | 'activity' | 'settings';
 
 export interface Toast {
   id: string;

@@ -3,18 +3,35 @@
 The core application never requires an external AI API. All AI capability is
 provided by local models behind the provider abstraction.
 
-## Status
+## Two tiers
 
-Phase 1 ships the *scaffolding* only:
+### 1. On-device (in-browser) — **working now (Phase 3)**
 
-- `src/ai/registry.ts` — catalogue of installable open-weight models with
-  license, size, VRAM/RAM needs, supported modes, hardware, speed/quality
-  estimates. Nothing is bundled or downloaded.
-- `src/ai/hardware.ts` — browser hardware profile (OS, GPU vendor via
-  `WEBGL_debug_renderer_info`, cores, `deviceMemory`, WebGPU/WebCodecs) →
-  `recommendedProfile` of `fast` / `balanced` / `quality`.
-- `src/ai/providers/local/localProvider.ts` — talks to a local service at
-  `http://127.0.0.1:8787` (not present yet); reports `health()` accordingly.
+`src/ai/local/` runs models directly in the browser via
+`@xenova/transformers` (WASM / WebGPU, code-split so it is never in the main
+bundle).
+
+- `types.ts` — the in-browser model catalogue (Whisper Tiny EN, Whisper Base).
+- `runtime.ts` — `localRuntime`: `install(id, onProgress)` downloads weights
+  from the HF hub **only on explicit request** and caches them; `isInstalled`,
+  `remove`, and `transcribe(pcm, sampleRate, opts)` → segments + word timings.
+  ORT WASM binaries load from a pinned jsDelivr path.
+- Used by: `state/projectStore` (`transcribeClip`, `removeSilences`,
+  `detectShotsForClip`), `ui/editor/OnDeviceModels.tsx` (AI Setup),
+  `ui/editor/panels/TranscribeControls.tsx`, `ui/editor/RightDock` transcript
+  tab, `ui/CommandPalette` search.
+- Zero-model helpers that pair with it: `src/audio/silence.ts` (RMS silence
+  detection), `src/video/shots.ts` (histogram cut detection),
+  `src/ai/search.ts` (local project search).
+
+### 2. Native runtime (separate process) — **scaffolding only**
+
+- `src/ai/registry.ts` — catalogue of large open-weight video/image models
+  with license, size, VRAM/RAM, modes, hardware.
+- `src/ai/hardware.ts` — browser hardware profile → `recommendedProfile`.
+- `src/ai/providers/local/localProvider.ts` — client for a local service at
+  `http://127.0.0.1:8787`; `health()` reports it absent. `capabilities` are
+  all-false until that service + a model exist.
 
 ## Phase 3 plan — the local inference service (spec §149–§155)
 

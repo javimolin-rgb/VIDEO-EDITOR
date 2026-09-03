@@ -7,8 +7,8 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | --- | --- | --- |
 | **1** | Foundation | **done** |
 | **2** | Professional editing | **done** |
-| 3 | Local AI (runtime, transcription, vision, search, TTS) | next |
-| 4 | Generative video (T2V/I2V, queue, model mgmt, history) | planned |
+| **3** | Local AI (on-device runtime, transcription, cleanup, search) | **done** |
+| 4 | Generative video (T2V/I2V, queue, model mgmt, history) | next |
 | 5 | Advanced generation (V2V, extend, region edit, bg, fill, camera, storyboard) | planned |
 | 6 | AI Director (script→storyboard→video, auto-edit, B-roll, continuity, campaign) | planned |
 | 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | planned |
@@ -82,16 +82,58 @@ compound clips, proxy generation, configurable shortcut map.
       4.5 MB); WebM fallback path intact.
 - [x] Transition survives splitting the outgoing clip; disappears with its clips.
 
-## Phase 3 — Local AI
+## Phase 3 — Local AI ✅
 
-Local inference service (`/health`, `/models`, `/models/install`,
-`/generate/*`, `/transcribe`, `/analyze/*`, `/jobs/:id`), model download with
-checksum/resume, Whisper-compatible transcription, vision analysis
-(shots/faces/objects/embeddings), semantic asset search, Piper TTS.
-`localProvider` gains a real transport; `capabilities` flips on from installed
-models.
+Delivered — everything runs **on-device**, no server, no API key:
 
-## Phases 4–8
+- **On-device runtime** (`src/ai/local/runtime.ts`): lazily loads
+  `@xenova/transformers` (its own code-split chunk, never in the main bundle).
+  Model weights download from the HF hub **only on an explicit Download click**
+  in AI Setup and are cached by the browser; installed models then work
+  offline. Install / Remove / progress wired to the catalogue
+  (`src/ai/local/types.ts`: Whisper Tiny EN, Whisper Base multilingual).
+- **Transcription** (spec §45, §46): decode → resample to 16 kHz → Whisper →
+  word timings → `TranscriptResult`. Feeds the Phase 2 caption engine
+  (`transcriptToCaptions.ts`) with per-word timings for the karaoke style.
+  Non-speech audio honestly yields zero cues (spec §159).
+- **Transcript panel** (RightDock): segment list, click-to-seek, "Use as
+  captions".
+- **Silence removal** (spec §47, §48): pure WebAudio RMS DSP
+  (`src/audio/silence.ts`) — conservative / balanced / aggressive — mapped to
+  timeline frames and applied via `removeSilencesFromClip` (split + ripple),
+  one undoable step. No model.
+- **Shot detection** (spec §176): downscaled luma-histogram frame diff
+  (`src/video/shots.ts`) → shot markers. No model.
+- **Local search** (spec §16, §174): `searchProject` over assets, markers,
+  caption cues and the transcript, surfaced in the ⌘K palette (jump to time or
+  select asset). Embedding/visual search is the next opt-in model.
+- AI activity log records transcription / silence / shot ops as `ai` kind
+  (undoable, spec §19, §121).
+
+Deferred: native local inference *service* for large video/image models
+(spec §149–§151), neural TTS file render (SpeechT5), CLIP visual-embedding
+search, object/face detection models — all plug into the same runtime +
+registry with no editor changes.
+
+### Phase 3 acceptance (spec §261, §264)
+
+- [x] Download a speech model in AI Setup → it installs and persists; Remove works.
+- [x] Transcribe a clip → transcript populates, captions generated with word
+      timings; empty audio → zero cues, never fabricated.
+- [x] Remove silences turns one clip into packed keep-segments and closes the
+      gap; single undo restores it.
+- [x] Everything except the one-time model download runs with no network.
+
+## Phase 4 — Generative video (next)
+
+Text→Video and Image→Video via a local model. Because open-weight video models
+need a native runtime (Python/Diffusers or ComfyUI) and GPU, Phase 4 starts
+with the **generation job queue, model-manager download flow, generation
+history/graph and the Studio wiring** against the existing
+`VideoGenerationProvider` interface, then connects a runtime. `localProvider`
+capabilities flip on from installed models; the UI already adapts.
+
+## Phases 5–8
 
 Follow the master spec sections §20–§255. Every new capability appears in the UI
 only when it actually works; otherwise it stays a labelled disabled state

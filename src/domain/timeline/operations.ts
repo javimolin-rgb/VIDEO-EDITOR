@@ -272,6 +272,51 @@ export function rippleDeleteClip(timeline: Timeline, clipId: string): Timeline {
   };
 }
 
+/**
+ * Cut a set of silent spans out of one clip and close the gaps (spec §47).
+ * `silentRanges` are timeline frames, sorted, non-overlapping, inside the clip.
+ * Implemented with the existing split + ripple-delete primitives so behaviour
+ * (and undo) is identical to doing it by hand.
+ */
+export function removeSilencesFromClip(
+  timeline: Timeline,
+  clipId: string,
+  silentRanges: FrameRange[],
+): { timeline: Timeline; removedFrames: Frame } {
+  const original = getClip(timeline, clipId);
+  if (!original || silentRanges.length === 0) return { timeline, removedFrames: 0 };
+
+  const ranges = [...silentRanges].sort((a, b) => a.start - b.start);
+  let tl = timeline;
+  let currentId: string | null = clipId;
+  let removed = 0;
+
+  for (const r of ranges) {
+    if (!currentId) break;
+    const start = r.start - removed;
+    const end = r.end - removed;
+    const cur = getClip(tl, currentId);
+    if (!cur) break;
+    const range = clipTimelineRange(cur);
+    if (start <= range.start || end >= range.end || end <= start) continue;
+
+    const afterStart = splitClip(tl, { clipId: currentId, atFrame: start });
+    tl = afterStart.timeline;
+    const middleId = afterStart.newClipId;
+    if (!middleId) continue;
+
+    const afterEnd = splitClip(tl, { clipId: middleId, atFrame: end });
+    tl = afterEnd.timeline;
+    const rightId = afterEnd.newClipId;
+
+    tl = rippleDeleteClip(tl, middleId);
+    removed += end - start;
+    currentId = rightId;
+  }
+
+  return { timeline: tl, removedFrames: removed };
+}
+
 export function duplicateClip(
   timeline: Timeline,
   clipId: string,

@@ -6,12 +6,12 @@ A **local-first** professional video editor with an **extensible local generativ
 > usable offline; generative features are optional adapters over local models.
 
 This repository is being built in phases against
-[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1 (Foundation) and 2
-(Professional editing) are implemented.**
+[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1 (Foundation), 2 (Professional
+editing) and 3 (Local AI) are implemented.**
 
 ---
 
-## What works today (Phases 1–2)
+## What works today (Phases 1–3)
 
 | Area | Status |
 | --- | --- |
@@ -30,18 +30,21 @@ This repository is being built in phases against
 | Audio | ✅ per-clip gain / pan / fades (gain keyframeable), per-track mixer, offline mix |
 | Preview + final render | ✅ one shared compositor — WYSIWYG |
 | Export | ✅ offline **MP4 (H.264/AAC)** via WebCodecs + `mp4-muxer`; real-time **WebM** fallback |
-| Undo / redo | ✅ snapshot history, per-entry activity log |
-| Command palette | ✅ ⌘K |
+| Undo / redo | ✅ snapshot history, per-entry activity log (incl. `ai` ops) |
+| Command palette + search | ✅ ⌘K commands **and** project search (captions / transcript / markers / assets) |
+| **On-device transcription** | ✅ Whisper (Tiny EN / Base) in-browser → captions with word timings; opt-in download, then offline |
+| **Silence removal** | ✅ on-device RMS DSP, conservative / balanced / aggressive, undoable |
+| **Shot detection** | ✅ on-device histogram frame-diff → shot markers |
+| AI Setup | ✅ real on-device model download / remove / progress; native-runtime catalogue listed (disabled) |
 | AI provider abstraction | ✅ capability-based, model router, **local provider is default & fallback** |
-| Local model registry + hardware detection | ✅ catalogue with licenses; OS / GPU / WebGPU / WebCodecs profile |
-| AI Studio & AI Setup | ✅ full layout, **honest disabled states** — nothing faked (spec §159/§160) |
+| AI Studio | ✅ full layout, **honest disabled states** — nothing faked (spec §159/§160) |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 
 Slip/slide/roll trims, parametric EQ / compressor / ducking, colour curves /
-HSL / LUTs / shot-match, compound clips, proxies; transcription, semantic
-search, TTS; all generative video (T2V/I2V/V2V/extend/region-edit/AI Director).
-See the roadmap.
+HSL / LUTs / shot-match, compound clips, proxies; neural TTS file render,
+visual-embedding search, object/face models; all generative video
+(T2V/I2V/V2V/extend/region-edit/AI Director). See the roadmap.
 
 ---
 

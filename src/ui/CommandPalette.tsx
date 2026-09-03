@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { searchProject, type SearchHit } from '@/ai/search';
 
 interface Command {
   id: string;
@@ -10,9 +11,9 @@ interface Command {
 }
 
 /**
- * Global command palette (spec §88). Phase 1 wires the editing commands that
- * exist today; generative commands appear here once a local model is
- * installed rather than as dead entries (spec §160).
+ * Global command palette + project search (spec §88, §174). Commands match the
+ * typed query; anything left over is run through `searchProject` so ⌘K also
+ * jumps to captions, transcript lines, markers and assets.
  */
 export function CommandPalette() {
   const open = useUIStore((s) => s.commandPaletteOpen);
@@ -33,11 +34,30 @@ export function CommandPalette() {
         hint: 'S',
         run: () => store().splitAtPlayhead(ui().selectedClipIds),
       },
+      { id: 'marker', title: 'Add marker at playhead', hint: 'M', run: () => store().addMarkerAtPlayhead() },
       {
-        id: 'marker',
-        title: 'Add marker at playhead',
-        hint: 'M',
-        run: () => store().addMarkerAtPlayhead(),
+        id: 'remove-silences',
+        title: 'Remove silences from selected clip (balanced)',
+        run: () => {
+          const id = ui().selectedClipIds[0];
+          if (id) void store().removeSilences(id, 'balanced');
+        },
+      },
+      {
+        id: 'detect-shots',
+        title: 'Detect shots in selected clip',
+        run: () => {
+          const id = ui().selectedClipIds[0];
+          if (id) void store().detectShotsForClip(id, 0.45);
+        },
+      },
+      {
+        id: 'captions',
+        title: 'Generate captions from audio (local)',
+        run: () => {
+          ui().setWorkspace('edit');
+          ui().setLeftPanel('text');
+        },
       },
       { id: 'add-video-track', title: 'Add video track', run: () => store().addTrack('video') },
       { id: 'add-audio-track', title: 'Add audio track', run: () => store().addTrack('audio') },
@@ -53,7 +73,28 @@ export function CommandPalette() {
     [store, ui],
   );
 
-  const filtered = commands.filter((c) => c.title.toLowerCase().includes(q.toLowerCase()));
+  const filteredCommands = commands.filter((c) => c.title.toLowerCase().includes(q.toLowerCase()));
+
+  const hits = useMemo<SearchHit[]>(() => {
+    if (q.trim().length < 2) return [];
+    const s = store();
+    if (!s.project) return [];
+    return searchProject(s.project, s.assets, s.transcript, q);
+  }, [q, store]);
+
+  const runHit = (hit: SearchHit) => {
+    const s = store();
+    if (hit.assetId) {
+      ui().selectAsset(hit.assetId);
+      ui().setWorkspace('edit');
+      ui().setLeftPanel('media');
+    } else if (hit.frame != null) {
+      ui().setWorkspace('edit');
+      s.setPlayhead(hit.frame);
+    }
+  };
+
+  const total = filteredCommands.length + hits.length;
 
   useEffect(() => {
     if (!open) {
@@ -69,23 +110,24 @@ export function CommandPalette() {
       <div className="palette-box" onClick={(e) => e.stopPropagation()}>
         <input
           autoFocus
-          placeholder="Type a command…"
+          placeholder="Command, or search captions / transcript / assets…"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
             setActive(0);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') setActive((a) => Math.min(a + 1, filtered.length - 1));
+            if (e.key === 'ArrowDown') setActive((a) => Math.min(a + 1, total - 1));
             if (e.key === 'ArrowUp') setActive((a) => Math.max(a - 1, 0));
             if (e.key === 'Enter') {
-              filtered[active]?.run();
+              if (active < filteredCommands.length) filteredCommands[active]?.run();
+              else runHit(hits[active - filteredCommands.length]!);
               setOpen(false);
             }
             if (e.key === 'Escape') setOpen(false);
           }}
         />
-        {filtered.map((c, i) => (
+        {filteredCommands.map((c, i) => (
           <div
             key={c.id}
             className={`palette-item ${i === active ? 'active' : ''}`}
@@ -99,7 +141,26 @@ export function CommandPalette() {
             {c.hint && <span className="hint">{c.hint}</span>}
           </div>
         ))}
-        {filtered.length === 0 && <div className="palette-item muted">No matching command</div>}
+        {hits.map((h, i) => {
+          const idx = filteredCommands.length + i;
+          return (
+            <div
+              key={`hit-${idx}`}
+              className={`palette-item ${idx === active ? 'active' : ''}`}
+              onMouseEnter={() => setActive(idx)}
+              onClick={() => {
+                runHit(h);
+                setOpen(false);
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {h.label}
+              </span>
+              <span className="hint">{h.kind}</span>
+            </div>
+          );
+        })}
+        {total === 0 && <div className="palette-item muted">Nothing matches</div>}
       </div>
     </div>
   );

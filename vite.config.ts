@@ -18,6 +18,11 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  optimizeDeps: {
+    // Pre-bundle so a single onnxruntime instance is used (avoids
+    // `registerBackend` being undefined); still code-split at build time.
+    include: ['@xenova/transformers'],
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { detectHardware, type HardwareProfile } from '@/ai/hardware';
 import { listModels, type ModelTask } from '@/ai/registry';
+import { OnDeviceModels } from './OnDeviceModels';
 
 const TASK_LABEL: Record<ModelTask, string> = {
   video: 'Video models',
@@ -60,6 +61,15 @@ export function AiSetup() {
         <div className="muted">Detecting…</div>
       )}
 
+      <OnDeviceModels />
+
+      <h4 style={{ margin: '22px 0 8px' }}>Native runtime models (via local service)</h4>
+      <p className="muted" style={{ fontSize: 12 }}>
+        Larger video / image models run in a separate local inference service (spec §149–§151),
+        which is not part of this build yet. Listed for planning; the registry, capability routing
+        and provider abstraction they plug into are already in place.
+      </p>
+
       {tasks.map((task) => {
         const models = listModels(task);
         if (models.length === 0) return null;
@@ -88,7 +98,7 @@ export function AiSetup() {
                 <div className="col" style={{ alignItems: 'stretch', minWidth: 120 }}>
                   <button
                     disabled
-                    title="The local inference service that performs downloads arrives in Phase 3."
+                    title="Needs the native local inference service, which is not part of this build."
                   >
                     Download
                   </button>
@@ -101,10 +111,10 @@ export function AiSetup() {
       })}
 
       <div className="notice" style={{ marginTop: 20 }}>
-        Install controls are disabled because the local inference service (spec §149–§151) is not
-        part of Phase 1. The registry, hardware detection, capability routing and provider
-        abstraction it depends on are all in place, so wiring a runtime (native Python / ComfyUI /
-        llama.cpp-style service) does not require touching the editor.
+        These native-runtime controls are disabled: the local inference service (spec §149–§151)
+        that would perform the downloads is not part of this build. On-device speech models above
+        are fully functional. Wiring a native runtime (Python / ComfyUI / llama.cpp-style service)
+        plugs into the existing registry and provider abstraction without touching the editor.
       </div>
     </div>
   );

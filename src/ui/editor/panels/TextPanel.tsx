@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { formatClock } from '@/lib/time';
 import type { CaptionPreset } from '@/domain/types';
+import { TranscribeControls } from './TranscribeControls';
 
 const PRESETS: CaptionPreset[] = ['minimal', 'bold', 'boxed', 'karaoke'];
 
@@ -36,11 +37,14 @@ export function TextPanel() {
         </label>
       </div>
 
+      <TranscribeControls />
+
       {layer.cues.length === 0 ? (
         <>
           <div className="notice" style={{ marginTop: 8 }}>
             Import an SRT/VTT file, or paste caption text below. WebVTT word timings enable the
-            karaoke style. Local transcription (generate captions from audio) arrives in Phase 3.
+            karaoke style — or generate captions from a clip's audio with the on-device speech
+            model above.
           </div>
           <div className="row" style={{ marginTop: 8 }}>
             <button onClick={() => fileRef.current?.click()}>Import .srt / .vtt</button>

@@ -1,15 +1,63 @@
+import { useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
+import { useUIStore } from '@/state/uiStore';
+import type { SilenceMode } from '@/audio/silence';
 
-/** Track mixer (spec §53, §228 — Phase 2 subset: gain + pan + mute). */
+/** Track mixer + local audio cleanup (spec §53, §47, §228). */
 export function AudioPanel() {
   const project = useProjectStore((s) => s.project);
   const updateTrack = useProjectStore((s) => s.updateTrack);
+  const removeSilences = useProjectStore((s) => s.removeSilences);
+  const localJob = useProjectStore((s) => s.localJob);
+  const selectedClipIds = useUIStore((s) => s.selectedClipIds);
+  const pushToast = useUIStore((s) => s.pushToast);
+  const [mode, setMode] = useState<SilenceMode>('balanced');
   if (!project) return null;
 
   const audioTracks = project.timeline.tracks.filter((t) => t.kind === 'audio');
+  const selClip = project.timeline.clips.find((c) => c.id === selectedClipIds[0]);
+  const busy = localJob?.kind === 'silence';
 
   return (
     <div>
+      <div className="model-row" style={{ display: 'block', padding: 10, marginBottom: 12 }}>
+        <strong style={{ fontSize: 12 }}>Remove silences (local)</strong>
+        <div className="muted" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+          Detects quiet gaps in the selected clip's audio and ripple-deletes them. Pure on-device
+          DSP — no model, undoable.
+        </div>
+        <div className="rowfields">
+          <select value={mode} onChange={(e) => setMode(e.target.value as SilenceMode)}>
+            <option value="conservative">Conservative</option>
+            <option value="balanced">Balanced</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+          <button
+            className="primary"
+            disabled={!selClip || busy}
+            onClick={async () => {
+              if (!selClip) return;
+              const res = await removeSilences(selClip.id, mode);
+              if (res) {
+                pushToast(
+                  res.cuts === 0 ? 'info' : 'success',
+                  res.cuts === 0
+                    ? 'No silence found at this threshold.'
+                    : `Removed ${res.cuts} silences (${res.removedSec.toFixed(1)}s).`,
+                );
+              }
+            }}
+          >
+            {busy ? localJob?.message ?? 'Working…' : 'Remove silences'}
+          </button>
+        </div>
+        {!selClip && (
+          <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+            Select a clip on the timeline first.
+          </div>
+        )}
+      </div>
+
       <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
         Track mixer. Per-clip gain, pan and fades live in the Inspector; EQ, compression and
         automatic ducking arrive in Phase 2.5.
