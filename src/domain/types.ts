@@ -7,7 +7,7 @@
 
 import type { Timebase, Frame, FrameRange } from '@/lib/time';
 
-export const PROJECT_SCHEMA_VERSION = 2 as const;
+export const PROJECT_SCHEMA_VERSION = 3 as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Assets (spec §14, §214)
@@ -352,6 +352,31 @@ export interface BrandKit {
   notes: string;
 }
 
+// ─── Reference board (spec §23, §24, §135, §186) ────────────────────────────
+
+export type ReferenceRole =
+  | 'character'
+  | 'product'
+  | 'clothing'
+  | 'environment'
+  | 'architecture'
+  | 'style'
+  | 'color'
+  | 'composition'
+  | 'camera'
+  | 'motion'
+  | 'audio'
+  | 'story'
+  | 'brand';
+
+export type ReferencePriority = 'critical' | 'high' | 'medium' | 'low';
+
+export interface ReferenceAsset {
+  assetId: string;
+  role: ReferenceRole;
+  priority: ReferencePriority;
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
@@ -369,6 +394,8 @@ export interface VideoProject {
   brandKit: BrandKit;
   /** Ids only; asset rows live in their own table. */
   assetIds: string[];
+  /** Reference board for generative work (spec §23). */
+  references: ReferenceAsset[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

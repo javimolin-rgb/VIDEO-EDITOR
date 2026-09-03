@@ -1,10 +1,15 @@
 /**
- * Model router / orchestrator (spec §100, §99). Given a task it returns the
- * best available provider, or explains why none can do it. It never silently
- * calls an external API (spec §99, §159).
+ * Model router / orchestrator (spec §100, §99, §201). Given a task it returns
+ * the best available provider, or explains why none can do it. It never
+ * silently calls an external API (spec §99, §159).
+ *
+ * Provider order = preference. The procedural generator is always present and
+ * needs nothing installed, so generative modes are never dead — a diffusion
+ * runtime, once connected, simply routes ahead of it.
  */
 
 import { localProvider } from './providers/local/localProvider';
+import { proceduralProvider } from './providers/procedural/proceduralProvider';
 import type { VideoGenerationProvider } from './provider';
 
 export type GenerativeTask =
@@ -15,11 +20,17 @@ export type GenerativeTask =
   | 'extend-video'
   | 'region-edit';
 
-/** Ordered by preference. Local is always first and always present. */
-const providers: VideoGenerationProvider[] = [localProvider];
+/** Ordered by preference. A native diffusion adapter would be unshifted here. */
+const providers: VideoGenerationProvider[] = [localProvider, proceduralProvider];
 
-export function registerProvider(provider: VideoGenerationProvider): void {
-  if (!providers.some((p) => p.id === provider.id)) providers.push(provider);
+export function registerProvider(provider: VideoGenerationProvider, front = false): void {
+  if (providers.some((p) => p.id === provider.id)) return;
+  if (front) providers.unshift(provider);
+  else providers.push(provider);
+}
+
+export function getProvider(id: string): VideoGenerationProvider | undefined {
+  return providers.find((p) => p.id === id);
 }
 
 export function listProviders(): readonly VideoGenerationProvider[] {
@@ -57,7 +68,7 @@ export function route(task: GenerativeTask): RouteResult {
   return {
     provider: null,
     reason:
-      'No installed local model can perform this task yet. ' +
-      'Editing is unaffected; install a compatible model in AI Setup to enable it.',
+      'No local backend can perform this task yet. Editing is unaffected; ' +
+      'a compatible local model or runtime will enable it.',
   };
 }

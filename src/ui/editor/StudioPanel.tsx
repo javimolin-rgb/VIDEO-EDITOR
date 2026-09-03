@@ -1,75 +1,160 @@
-import { useEffect, useState } from 'react';
-import { useUIStore } from '@/state/uiStore';
+import { useEffect, useRef } from 'react';
+import { useGenStore } from '@/state/genStore';
+import { useProjectStore } from '@/state/projectStore';
+import { getMediaUrl } from '@/state/mediaUrls';
 import { route, type GenerativeTask } from '@/ai/orchestrator';
-import { localProvider } from '@/ai/providers/local/localProvider';
+import { PromptForm } from './studio/PromptForm';
+import { ReferenceBoard } from './studio/ReferenceBoard';
+import { GenerationHistory } from './studio/GenerationHistory';
+import type { GenKind } from '@/ai/gen/queue';
 
-const MODES: { id: string; label: string; task: GenerativeTask | null }[] = [
-  { id: 't2v', label: 'Text → Video', task: 'text-to-video' },
-  { id: 'i2v', label: 'Image → Video', task: 'image-to-video' },
+const MODES: Array<{ id: string; label: string; task: GenerativeTask; kind?: GenKind }> = [
+  { id: 't2v', label: 'Text → Video', task: 'text-to-video', kind: 'text-to-video' },
+  { id: 'i2v', label: 'Image → Video', task: 'image-to-video', kind: 'image-to-video' },
   { id: 'ref', label: 'Reference → Video', task: 'reference-to-video' },
   { id: 'v2v', label: 'Video → Video', task: 'video-to-video' },
   { id: 'extend', label: 'Extend Video', task: 'extend-video' },
   { id: 'region', label: 'Region Edit', task: 'region-edit' },
-  { id: 'storyboard', label: 'Storyboard → Video', task: null },
-  { id: 'director', label: 'AI Director', task: null },
 ];
 
 /**
- * AI Video Studio (spec §20, §146). The layout and mode list are real; the
- * generative actions are gated on an installed local model. Until then every
- * control is an honest disabled state (spec §159, §160) — never a fake render.
+ * AI Video Studio (spec §20, §146, §147). Text→Video and Image→Video run
+ * against a real local backend (the procedural generator, or a diffusion
+ * runtime once connected). Modes without a backend show an honest disabled
+ * state — never a fake result (spec §159, §160).
  */
 export function StudioPanel() {
-  const setWorkspace = useUIStore((s) => s.setWorkspace);
-  const [health, setHealth] = useState<string>('Checking local AI service…');
+  const project = useProjectStore((s) => s.project);
+  const assets = useProjectStore((s) => s.assets);
+  const mode = useGenStore((s) => s.mode);
+  const setMode = useGenStore((s) => s.setMode);
+  const reuseOffer = useGenStore((s) => s.reuseOffer);
+  const dismissReuse = useGenStore((s) => s.dismissReuse);
+  const lastResultAssetId = useGenStore((s) => s.lastResultAssetId);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const lastAsset = assets.find((a) => a.id === lastResultAssetId);
 
   useEffect(() => {
-    void localProvider.health().then((h) => setHealth(h.detail));
-  }, []);
+    let cancelled = false;
+    if (lastAsset) {
+      void getMediaUrl(lastAsset).then((url) => {
+        if (!cancelled && url && videoRef.current) {
+          videoRef.current.src = url;
+          videoRef.current.load();
+        }
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [lastAsset]);
 
-  const caps = localProvider.capabilities;
-  const anyCapability = Object.values(caps).some((v) => v === true);
+  if (!project) return null;
 
   return (
-    <div className="panel-body" style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="panel-body" style={{ maxWidth: 1180, margin: '0 auto' }}>
       <div className="row">
         <h2>AI Video Studio</h2>
-        <div className="spacer" />
-        <button onClick={() => setWorkspace('ai-setup')}>Open AI Setup</button>
+        <span className="spacer" />
+        <span className="pill good">Procedural generator ready · local · no model</span>
       </div>
 
-      <div className="notice" style={{ marginTop: 12 }}>
-        <strong>Local generation is not active yet.</strong>
-        <div style={{ marginTop: 6 }}>{health}</div>
-        <div style={{ marginTop: 6 }} className="muted">
-          The editor is fully usable without this. Generative modes below unlock automatically once a
-          compatible local model is installed and the local inference service is running (Phase 3–4).
-          No external AI API is ever required or called.
-        </div>
-      </div>
-
-      <div className="studio-modes" style={{ marginTop: 16 }}>
+      <div className="row" style={{ gap: 6, margin: '12px 0', flexWrap: 'wrap' }}>
         {MODES.map((m) => {
-          const r = m.task ? route(m.task) : { provider: null, reason: 'Planned for Phase 5–6.' };
+          const r = route(m.task);
+          const enabled = !!r.provider && !!m.kind;
+          const activeMode = m.kind === mode;
           return (
-            <div key={m.id} className="studio-mode" style={{ opacity: r.provider ? 1 : 0.55 }}>
-              <div style={{ fontWeight: 600 }}>{m.label}</div>
-              <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-                {r.provider ? 'Available' : 'Unavailable'}
-              </div>
-              <div className="pill" style={{ marginTop: 8 }}>
-                {r.provider ? r.reason : 'Model not installed'}
-              </div>
-            </div>
+            <button
+              key={m.id}
+              className={activeMode ? 'primary' : ''}
+              disabled={!enabled}
+              title={enabled ? r.reason : 'No local backend for this yet (Phase 5).'}
+              onClick={() => m.kind && setMode(m.kind)}
+            >
+              {m.label}
+            </button>
           );
         })}
       </div>
 
-      {!anyCapability && (
-        <div className="muted" style={{ marginTop: 16, fontSize: 12 }}>
-          Provider: <span className="mono">{localProvider.id}</span> — capabilities currently all
-          disabled. The UI reads provider capabilities, not model names (spec §201), so any local
-          model you add later lights up the matching modes here without code changes.
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '340px 1fr 340px',
+          gap: 14,
+          alignItems: 'start',
+        }}
+      >
+        <div className="col" style={{ gap: 16 }}>
+          <PromptForm />
+          <ReferenceBoard />
+        </div>
+
+        <div className="col" style={{ gap: 10 }}>
+          <div
+            className="preview-frame"
+            style={{
+              aspectRatio: `${project.settings.resolution.width} / ${project.settings.resolution.height}`,
+              width: '100%',
+            }}
+          >
+            {lastAsset ? (
+              <video ref={videoRef} controls loop style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <div
+                className="muted"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  padding: 20,
+                  textAlign: 'center',
+                }}
+              >
+                Your generated clip will appear here. It becomes a normal asset — trim, colour,
+                add effects, drop it on the timeline.
+              </div>
+            )}
+          </div>
+          {lastAsset && (
+            <div className="muted mono" style={{ fontSize: 11 }}>
+              {lastAsset.name} · {lastAsset.meta.width}×{lastAsset.meta.height} ·{' '}
+              {(lastAsset.meta.sizeBytes / 1024 / 1024).toFixed(1)} MB
+              {lastAsset.generation?.qualityScore != null &&
+                ` · QC ${Math.round(lastAsset.generation.qualityScore * 100)}%`}
+            </div>
+          )}
+        </div>
+
+        <GenerationHistory />
+      </div>
+
+      {reuseOffer && (
+        <div className="modal-backdrop" onClick={dismissReuse}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Identical request found</h2>
+            <p className="muted">
+              You already generated this exact prompt / settings
+              {reuseOffer.row.qualityScore != null &&
+                ` (QC ${Math.round(reuseOffer.row.qualityScore * 100)}%)`}
+              . Reuse that result or generate a fresh one?
+            </p>
+            <div className="actions">
+              <button
+                onClick={() => {
+                  reuseOffer.proceed();
+                }}
+              >
+                Generate anyway
+              </button>
+              <button className="primary" onClick={dismissReuse}>
+                Keep existing
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

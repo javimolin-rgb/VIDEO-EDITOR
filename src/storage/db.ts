@@ -10,7 +10,7 @@
  */
 
 import Dexie, { type EntityTable } from 'dexie';
-import type { Asset, ProjectVersion, VideoProject } from '@/domain/types';
+import type { Asset, GenerationMeta, ProjectVersion, VideoProject } from '@/domain/types';
 
 export interface ProjectRow {
   id: string;
@@ -36,12 +36,29 @@ export interface RecoveryRow {
 /** Asset already carries `id` and `projectId`; aliased for Dexie typing clarity. */
 export type AssetRow = Asset;
 
+/** One row per generated clip (spec §124, §243) — the generation history/graph. */
+export interface GenerationRow {
+  id: string;
+  projectId: string;
+  parentId: string | null;
+  kind: string;
+  /** Deterministic request hash for "use existing result" (spec §173). */
+  requestHash: string;
+  /** The asset produced. */
+  assetId: string;
+  meta: GenerationMeta;
+  qualityScore: number | null;
+  qualityIssues: string[];
+  createdAt: number;
+}
+
 class AppDatabase extends Dexie {
   projects!: EntityTable<ProjectRow, 'id'>;
   assets!: EntityTable<AssetRow, 'id'>;
   blobs!: EntityTable<BlobRow, 'key'>;
   versions!: EntityTable<ProjectVersion, 'id'>;
   recovery!: EntityTable<RecoveryRow, 'projectId'>;
+  generations!: EntityTable<GenerationRow, 'id'>;
 
   constructor() {
     super('ai-video-editor');
@@ -51,6 +68,9 @@ class AppDatabase extends Dexie {
       blobs: 'key, projectId, createdAt',
       versions: 'id, projectId, createdAt',
       recovery: 'projectId, savedAt',
+    });
+    this.version(2).stores({
+      generations: 'id, projectId, parentId, requestHash, createdAt',
     });
   }
 }

@@ -55,6 +55,29 @@ export function contentEndFrame(timeline: Timeline): Frame {
   return end;
 }
 
+/**
+ * The empty span on `trackId` that contains `frame` (spec §41, §208). Bounded
+ * by the previous clip's end and the next clip's start; returns null if the
+ * frame is inside a clip or there is no meaningful gap.
+ */
+export function gapAt(timeline: Timeline, trackId: string, frame: Frame): FrameRange | null {
+  const clips = clipsOnTrack(timeline, trackId);
+  for (const c of clips) {
+    const r = clipTimelineRange(c);
+    if (frame >= r.start && frame < r.end) return null; // inside a clip
+  }
+  let start = 0;
+  let end = Number.POSITIVE_INFINITY;
+  for (const c of clips) {
+    const r = clipTimelineRange(c);
+    if (r.end <= frame) start = Math.max(start, r.end);
+    if (r.start > frame) end = Math.min(end, r.start);
+  }
+  if (!Number.isFinite(end)) return null; // open-ended, not a gap between clips
+  if (end - start < 2) return null;
+  return { start, end };
+}
+
 function overlaps(a: FrameRange, b: FrameRange): boolean {
   return a.start < b.end && b.start < a.end;
 }

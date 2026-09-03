@@ -97,6 +97,18 @@ export interface GenerationResult {
   jobId: string;
   /** Populated when phase === 'ready'. Blob is an in-memory result clip. */
   output: { blob: Blob; mimeType: string; durationSec: number } | null;
+  /** Model identity for the generation record (spec §243). */
+  modelId: string;
+  modelVersion: string;
+  /** The seed actually used (providers may resolve `null` to a random one). */
+  seed: number | null;
+}
+
+/** Passed by the queue so a provider can stream progress and honour cancel. */
+export interface GenerationContext {
+  jobId: string;
+  signal: AbortSignal;
+  onPhase: (phase: JobPhase, progress: number | null, message: string) => void;
 }
 
 /**
@@ -111,12 +123,21 @@ export interface VideoGenerationProvider {
   /** Cheap liveness check for the local service (spec §251). */
   health(): Promise<{ ok: boolean; detail: string }>;
 
-  generateTextToVideo?(req: GenerationRequestBase): Promise<GenerationResult>;
-  generateImageToVideo?(req: GenerationRequestBase & { firstFrameAssetId: string }): Promise<GenerationResult>;
-  generateReferenceVideo?(req: GenerationRequestBase): Promise<GenerationResult>;
-  editVideo?(req: GenerationRequestBase & { sourceAssetId: string }): Promise<GenerationResult>;
-  extendVideo?(req: GenerationRequestBase & { sourceAssetId: string; fromEnd: boolean }): Promise<GenerationResult>;
+  generateTextToVideo?(req: GenerationRequestBase, ctx: GenerationContext): Promise<GenerationResult>;
+  generateImageToVideo?(
+    req: GenerationRequestBase & { firstFrameAssetId: string },
+    ctx: GenerationContext,
+  ): Promise<GenerationResult>;
+  generateReferenceVideo?(req: GenerationRequestBase, ctx: GenerationContext): Promise<GenerationResult>;
+  editVideo?(
+    req: GenerationRequestBase & { sourceAssetId: string },
+    ctx: GenerationContext,
+  ): Promise<GenerationResult>;
+  extendVideo?(
+    req: GenerationRequestBase & { sourceAssetId: string; fromEnd: boolean },
+    ctx: GenerationContext,
+  ): Promise<GenerationResult>;
 
-  getJobStatus(jobId: string): Promise<JobStatus>;
-  cancelJob(jobId: string): Promise<void>;
+  getJobStatus?(jobId: string): Promise<JobStatus>;
+  cancelJob?(jobId: string): Promise<void>;
 }

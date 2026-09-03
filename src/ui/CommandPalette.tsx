@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useGenStore } from '@/state/genStore';
 import { searchProject, type SearchHit } from '@/ai/search';
 
 interface Command {
@@ -67,6 +68,21 @@ export function CommandPalette() {
         run: () => void store().createVersion(`Snapshot ${new Date().toLocaleTimeString()}`),
       },
       { id: 'studio', title: 'Open AI Video Studio', run: () => ui().setWorkspace('studio') },
+      {
+        id: 'gen-video',
+        title: 'Generate video from a prompt…',
+        run: () => {
+          useGenStore.getState().setMode('text-to-video');
+          ui().setWorkspace('studio');
+        },
+      },
+      {
+        id: 'fill-gap',
+        title: 'Fill gap at playhead with AI',
+        run: () => {
+          void useGenStore.getState().fillGap();
+        },
+      },
       { id: 'ai-setup', title: 'Open AI Setup (local models)', run: () => ui().setWorkspace('ai-setup') },
       { id: 'edit', title: 'Back to editor', run: () => ui().setWorkspace('edit') },
     ],

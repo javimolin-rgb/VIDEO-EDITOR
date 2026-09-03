@@ -8,8 +8,8 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | **1** | Foundation | **done** |
 | **2** | Professional editing | **done** |
 | **3** | Local AI (on-device runtime, transcription, cleanup, search) | **done** |
-| 4 | Generative video (T2V/I2V, queue, model mgmt, history) | next |
-| 5 | Advanced generation (V2V, extend, region edit, bg, fill, camera, storyboard) | planned |
+| **4** | Generative video (T2V/I2V, queue, QC, history, references) | **done** |
+| 5 | Advanced generation (V2V, extend, region edit, bg, fill, camera, storyboard) | next |
 | 6 | AI Director (script→storyboard→video, auto-edit, B-roll, continuity, campaign) | planned |
 | 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | planned |
 | 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | planned |
@@ -124,14 +124,48 @@ registry with no editor changes.
       gap; single undo restores it.
 - [x] Everything except the one-time model download runs with no network.
 
-## Phase 4 — Generative video (next)
+## Phase 4 — Generative video ✅
 
-Text→Video and Image→Video via a local model. Because open-weight video models
-need a native runtime (Python/Diffusers or ComfyUI) and GPU, Phase 4 starts
-with the **generation job queue, model-manager download flow, generation
-history/graph and the Studio wiring** against the existing
-`VideoGenerationProvider` interface, then connects a runtime. `localProvider`
-capabilities flip on from installed models; the UI already adapts.
+Delivered — see `GENERATION_ENGINE.md`:
+
+- **Prompt engine** (`ai/gen/prompt.ts`, spec §132–§134): free text →
+  structured prompt, heuristic enhancer that never discards user intent,
+  constraint extraction, `buildRequest`.
+- **Job queue** (`ai/gen/queue.ts`, spec §89, §90, §148): real phases,
+  `AbortController` cancel, concurrency cap.
+- **Procedural provider** (`ai/providers/procedural/`, spec §232): a genuine
+  local generator — seeded frame synthesis from the prompt's palette / motion /
+  camera, encoded to real MP4 (WebCodecs) / WebM. Text→Video and Image→Video
+  (Ken-Burns). Not a diffusion model, labelled as such, not a placeholder
+  (spec §159). `requestHash` for dedup (spec §173).
+- **Model router** (`ai/orchestrator.ts`): capability-based; a native diffusion
+  adapter routes ahead of procedural once connected. `localProvider` stays the
+  disabled native client.
+- **Quality control** (`ai/gen/quality.ts`, spec §78): decode / size / duration
+  / black-frame / flicker checks → score + issues; never insert blindly.
+- **Generation history + graph** (`ai/gen/history.ts` + Dexie `generations`,
+  spec §75, §124, §125): prompt / model / seed / params / parent per clip;
+  variation tree; `findByRequestHash`.
+- **Reference board** (`project.references`, spec §23, §24, §135): per-project
+  references with role + priority; schema **v3** + migration.
+- **AI Video Studio** (`ui/editor/StudioPanel.tsx` + `studio/`, spec §146,
+  §147): mode bar, prompt form (simple + advanced), reference board, live
+  preview of the result, job list with phases/cancel, generation history with
+  Add-to-timeline / Regenerate / Variations.
+- **Generation ↔ timeline** (spec §205, §206, §41, §208): every result is a
+  normal `generated`-role asset; `gapAt` + "Fill gap with AI" drop a bridge
+  clip straight into a timeline gap.
+
+### Phase 4 acceptance (spec §262, §270, §275, §276)
+
+- [x] Text→Video and Image→Video produce a real, playable clip that becomes a
+      timeline-ready asset. (verified: 1920×1080 MP4, 5.1 MB, QC 100%)
+- [x] Job shows phases and can be cancelled; concurrency capped at 1.
+- [x] Variations branch under their parent in the history graph; restore/parent
+      links hold.
+- [x] Deleting every non-`local` provider still compiles; no brand-name
+      branching in business logic.
+- [x] Nothing is faked — modes without a backend are disabled with a reason.
 
 ## Phases 5–8
 

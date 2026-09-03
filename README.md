@@ -7,11 +7,11 @@ A **local-first** professional video editor with an **extensible local generativ
 
 This repository is being built in phases against
 [`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1 (Foundation), 2 (Professional
-editing) and 3 (Local AI) are implemented.**
+editing), 3 (Local AI) and 4 (Generative video) are implemented.**
 
 ---
 
-## What works today (Phases 1–3)
+## What works today (Phases 1–4)
 
 | Area | Status |
 | --- | --- |
@@ -36,15 +36,18 @@ editing) and 3 (Local AI) are implemented.**
 | **Silence removal** | ✅ on-device RMS DSP, conservative / balanced / aggressive, undoable |
 | **Shot detection** | ✅ on-device histogram frame-diff → shot markers |
 | AI Setup | ✅ real on-device model download / remove / progress; native-runtime catalogue listed (disabled) |
-| AI provider abstraction | ✅ capability-based, model router, **local provider is default & fallback** |
-| AI Studio | ✅ full layout, **honest disabled states** — nothing faked (spec §159/§160) |
+| AI provider abstraction | ✅ capability-based, model router; procedural generator + disabled native client |
+| **Generative video** | ✅ **Text→Video** & **Image→Video** — real seeded frame synthesis → MP4, runs locally, no model, no download |
+| **Generation pipeline** | ✅ prompt engine · job queue (phases/cancel) · quality control · history graph · variations · reference board |
+| **Generation ↔ timeline** | ✅ result is a normal asset; "Fill gap with AI" drops a bridge clip into a timeline gap |
+| AI Studio | ✅ full workspace — prompt form, references, live preview, job list, history; **honest disabled states** for unbuilt modes |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 
 Slip/slide/roll trims, parametric EQ / compressor / ducking, colour curves /
 HSL / LUTs / shot-match, compound clips, proxies; neural TTS file render,
-visual-embedding search, object/face models; all generative video
-(T2V/I2V/V2V/extend/region-edit/AI Director). See the roadmap.
+visual-embedding search; Video→Video, Extend, Region edit, Generative fill,
+Storyboard→Video, AI Director. See the roadmap.
 
 ---
 

@@ -31,6 +31,9 @@ import type {
   CaptionStyle,
   Clip,
   ProjectSettings,
+  ReferenceAsset,
+  ReferencePriority,
+  ReferenceRole,
   TrackKind,
   TransitionType,
   VideoProject,
@@ -150,6 +153,13 @@ interface ProjectState {
   removeAsset: (assetId: string) => Promise<void>;
   renameAsset: (assetId: string, name: string) => Promise<void>;
   setAssetRole: (assetId: string, role: AssetRole) => Promise<void>;
+  /** Register a clip produced by the generative engine (spec §205). */
+  addGeneratedAsset: (asset: Asset, blob: Blob) => Promise<void>;
+
+  // reference board (spec §23)
+  addReference: (assetId: string, role: ReferenceRole, priority: ReferencePriority) => void;
+  updateReference: (assetId: string, patch: Partial<Omit<ReferenceAsset, 'assetId'>>) => void;
+  removeReference: (assetId: string) => void;
 
   // project meta / settings
   renameProject: (name: string) => void;
@@ -748,6 +758,37 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const updated = { ...asset, role };
     await putAsset(updated);
     set((s) => ({ assets: s.assets.map((a) => (a.id === assetId ? updated : a)) }));
+  },
+
+  async addGeneratedAsset(asset, blob) {
+    await putAsset(asset, blob);
+    set((s) => ({ assets: [...s.assets, asset] }));
+    get().mutate((draft) => {
+      draft.assetIds = [...draft.assetIds, asset.id];
+    }, `Generated ${asset.name}`, 'ai');
+  },
+
+  addReference(assetId, role, priority) {
+    get().mutate((draft) => {
+      draft.references = [
+        ...draft.references.filter((r) => r.assetId !== assetId),
+        { assetId, role, priority },
+      ];
+    }, 'Add reference');
+  },
+
+  updateReference(assetId, patch) {
+    get().mutate((draft) => {
+      draft.references = draft.references.map((r) =>
+        r.assetId === assetId ? { ...r, ...patch } : r,
+      );
+    }, 'Update reference');
+  },
+
+  removeReference(assetId) {
+    get().mutate((draft) => {
+      draft.references = draft.references.filter((r) => r.assetId !== assetId);
+    }, 'Remove reference');
   },
 
   // ─── meta / settings ──────────────────────────────────────────────────────

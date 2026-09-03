@@ -85,6 +85,7 @@ export function createProject(opts: CreateProjectOptions = {}): VideoProject {
     timeline: createEmptyTimeline(fps),
     brandKit: { logos: [], fonts: [], colors: [], notes: '' },
     assetIds: [],
+    references: [],
   };
 }
 
