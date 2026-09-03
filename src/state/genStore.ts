@@ -831,7 +831,9 @@ async function posterFrame(blob: Blob): Promise<string | null> {
   } catch {
     return null;
   } finally {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
     URL.revokeObjectURL(url);
-    video.src = '';
   }
 }

@@ -11,6 +11,7 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import type { Asset, GenerationMeta, ProjectVersion, VideoProject } from '@/domain/types';
+import type { BrandTemplate, Recipe } from '@/automation/types';
 
 export interface ProjectRow {
   id: string;
@@ -59,6 +60,8 @@ class AppDatabase extends Dexie {
   versions!: EntityTable<ProjectVersion, 'id'>;
   recovery!: EntityTable<RecoveryRow, 'projectId'>;
   generations!: EntityTable<GenerationRow, 'id'>;
+  recipes!: EntityTable<Recipe, 'id'>;
+  brandTemplates!: EntityTable<BrandTemplate, 'id'>;
 
   constructor() {
     super('ai-video-editor');
@@ -71,6 +74,10 @@ class AppDatabase extends Dexie {
     });
     this.version(2).stores({
       generations: 'id, projectId, parentId, requestHash, createdAt',
+    });
+    this.version(3).stores({
+      recipes: 'id, trigger, updatedAt',
+      brandTemplates: 'id, createdAt',
     });
   }
 }

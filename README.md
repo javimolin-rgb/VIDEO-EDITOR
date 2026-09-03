@@ -6,13 +6,13 @@ A **local-first** professional video editor with an **extensible local generativ
 > usable offline; generative features are optional adapters over local models.
 
 This repository is being built in phases against
-[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1–6 are implemented**
+[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1–7 are implemented**
 (Foundation, Professional editing, Local AI, Generative video, Advanced
-generation, AI Director).
+generation, AI Director, Automation). Phase 8 (Polish) is next.
 
 ---
 
-## What works today (Phases 1–6)
+## What works today (Phases 1–7)
 
 | Area | Status |
 | --- | --- |
@@ -46,6 +46,9 @@ generation, AI Director).
 | **Continuity engine** | ✅ palette/luma score between adjacent clips, jarring-cut flags |
 | **AI Director** | ✅ brief or script → editable numbered plan → run: storyboard, generate, QC, assemble, captions, B-roll, colour-match; autonomy levels; per-step outcomes; honest skips |
 | **Generative B-roll** | ✅ per caption line: search local media first, else generate a short clip onto the B-roll track |
+| **Automation** | ✅ reusable recipes (10 step types), `on-import` trigger, run log; steps reuse the existing ops; missing capabilities skipped with a reason |
+| **Social repurposing** | ✅ auto-reframe per platform + AI content pack (title / description / tags / CTA / hook note) |
+| **Brand templates** | ✅ save caption style + colours, apply to any project, use as a recipe step |
 | AI Studio | ✅ Generate / Storyboard / Director views; **honest disabled states** for unbuilt modes |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)

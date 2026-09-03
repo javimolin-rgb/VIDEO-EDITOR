@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import { useGenStore } from '@/state/genStore';
+import { useAutomationStore } from '@/state/automationStore';
 import { searchProject, type SearchHit } from '@/ai/search';
 
 interface Command {
@@ -104,6 +105,16 @@ export function CommandPalette() {
         title: 'Generate B-roll from captions',
         run: () => void useGenStore.getState().generateBroll(),
       },
+      {
+        id: 'automation',
+        title: 'Open Automation (recipes, repurpose, brand)',
+        run: () => ui().setWorkspace('automation'),
+      },
+      ...useAutomationStore.getState().recipes.map((r) => ({
+        id: `recipe-${r.id}`,
+        title: `Run recipe: ${r.name}`,
+        run: () => void useAutomationStore.getState().runRecipe(r.id),
+      })),
       {
         id: 'extend-clip',
         title: 'Extend selected clip (+3s)',

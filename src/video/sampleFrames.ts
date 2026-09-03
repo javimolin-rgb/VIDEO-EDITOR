@@ -7,7 +7,7 @@ import type { Asset } from '@/domain/types';
 import { getAssetBlob } from '@/storage/repository';
 import { averageStats, statsFromImageData, type LookStats } from '@/ai/style';
 
-async function loadVideo(blob: Blob): Promise<HTMLVideoElement> {
+async function loadVideo(blob: Blob): Promise<{ video: HTMLVideoElement; url: string }> {
   const url = URL.createObjectURL(blob);
   const video = document.createElement('video');
   video.src = url;
@@ -18,7 +18,14 @@ async function loadVideo(blob: Blob): Promise<HTMLVideoElement> {
     video.onerror = () => reject(new Error('video load failed'));
     setTimeout(() => reject(new Error('video load timeout')), 5000);
   });
-  return video;
+  return { video, url };
+}
+
+function releaseVideo(video: HTMLVideoElement, url: string): void {
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  URL.revokeObjectURL(url);
 }
 
 function seek(video: HTMLVideoElement, t: number): Promise<void> {
@@ -61,8 +68,9 @@ export async function sampleLook(
     return statsFromImageData(ctx.getImageData(0, 0, W, H).data);
   }
 
-  const video = await loadVideo(blob).catch(() => null);
-  if (!video) return null;
+  const loaded = await loadVideo(blob).catch(() => null);
+  if (!loaded) return null;
+  const { video, url } = loaded;
   try {
     const dur = Number.isFinite(video.duration) ? video.duration : 1;
     const start = opts.startSec ?? 0;
@@ -78,7 +86,7 @@ export async function sampleLook(
     }
     return stats.length ? averageStats(stats) : null;
   } finally {
-    video.src = '';
+    releaseVideo(video, url);
   }
 }
 
@@ -92,8 +100,9 @@ export async function extractFrame(
   if (!blob) return null;
   if (asset.kind === 'image') return createImageBitmap(blob).catch(() => null);
 
-  const video = await loadVideo(blob).catch(() => null);
-  if (!video) return null;
+  const loaded = await loadVideo(blob).catch(() => null);
+  if (!loaded) return null;
+  const { video, url } = loaded;
   try {
     const dur = Number.isFinite(video.duration) ? video.duration : 1;
     const t = which === 'first' ? 0.02 : which === 'last' ? Math.max(0, dur - 0.05) : which;
@@ -105,6 +114,6 @@ export async function extractFrame(
     c.getContext('2d')!.drawImage(video, 0, 0);
     return createImageBitmap(c).catch(() => null);
   } finally {
-    video.src = '';
+    releaseVideo(video, url);
   }
 }

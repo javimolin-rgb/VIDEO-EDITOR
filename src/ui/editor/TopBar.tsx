@@ -60,6 +60,12 @@ export function TopBar() {
           AI Studio
         </button>
         <button
+          className={workspace === 'automation' ? 'primary' : 'ghost'}
+          onClick={() => setWorkspace('automation')}
+        >
+          Automation
+        </button>
+        <button
           className={workspace === 'ai-setup' ? 'primary' : 'ghost'}
           onClick={() => setWorkspace('ai-setup')}
         >

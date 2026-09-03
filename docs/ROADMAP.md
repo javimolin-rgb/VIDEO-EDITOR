@@ -11,8 +11,8 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | **4** | Generative video (T2V/I2V, queue, QC, history, references) | **done** |
 | **5** | Advanced generation (storyboard, extend, look-match, auto-reframe, continuity) | **done** |
 | **6** | AI Director (brief/script → plan → run: storyboard, generate, assemble, colour, captions, B-roll) | **done** |
-| 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | next |
-| 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | planned |
+| **7** | Automation (recipes, on-import triggers, social repurposing, brand templates, content pack) | **done** |
+| 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | next |
 
 ## Phase 1 — Foundation ✅
 
@@ -244,11 +244,52 @@ approval, then runs it with a plain-language outcome per step (spec §18, §120,
 - [x] Steps with no backend (music, SFX) are `skipped` with a reason, never
       faked.
 
-## Phases 7–8
+## Phase 7 — Automation ✅
 
-Follow the master spec sections §20–§255. Every new capability appears in the UI
-only when it actually works; otherwise it stays a labelled disabled state
-(§257). Still deferred until a diffusion runtime exists: true V2V
-(environment / clothing / character swap), region-mask object replacement /
-inpainting, generative background replacement — each a declared
-`VideoGenerationProvider` method.
+- **Recipe engine** (`automation/types.ts`, `state/automationStore.ts`,
+  spec §87): a recipe is an ordered list of typed steps stored globally (Dexie
+  `recipes`, db v3) so it is reusable. Steps: remove-silences, detect-shots,
+  generate-captions (gated on a speech model), caption-style, normalize-audio,
+  auto-color, auto-reframe, add-broll, apply-brand, export. Each step reuses a
+  Phase 2–6 operation; no new capability code. The executor runs sequentially
+  with a plain-language outcome per step; missing capabilities are `skipped`
+  with a reason.
+- **Triggers** (spec §87 "WHEN video imported"): `manual` and `on-import`.
+  `projectStore.importFiles` calls a registered hook; `automationStore` fires
+  the first matching enabled `on-import` recipe.
+- **normalize-audio** (`automation/normalize.ts`): renders the mix
+  (`OfflineAudioContext`), measures RMS dBFS, sets audio-track gains toward a
+  target (clamped). **auto-color** (`automation/autocolor.ts`): samples each
+  clip and grades it toward a neutral target with the look-match maths.
+- **Social repurposing** (spec §82): pick platforms → auto-reframe the first
+  video clip to each platform aspect (subject-tracked) + draft an **AI content
+  pack** (title / description / tags / CTA / heuristic hook note,
+  `automation/contentPack.ts`, spec §182, §84) from the captions / transcript.
+- **Brand templates** (spec §86, §141): save the current caption style +
+  colours (Dexie `brandTemplates`), apply to any project, use as a recipe step.
+- UI: an **Automation** workspace (`ui/editor/AutomationPanel.tsx`) — recipe
+  list + step editor, run log, repurpose panel, brand templates. ⌘K exposes
+  "Run recipe: …" per saved recipe.
+
+### Phase 7 acceptance (spec §87, §164, §278, §281)
+
+- [x] Build a recipe (caption style → auto colour → normalize audio), run it —
+      every step reports what it did. (verified live: caption style set, 5 clips
+      graded, mix measured −26.7 dBFS → gain ×3.44)
+- [x] `on-import` recipe fires when media is imported.
+- [x] Repurpose produces a reframed clip per platform + a content-pack draft.
+- [x] A brand template round-trips: save from a project, apply to another.
+- [x] Steps needing a model (transcription) are `skipped` with a reason.
+
+## Phase 8 — Polish (next)
+
+Performance passes (worker offload, proxy media, manual-chunk the bundle),
+accessibility (keyboard nav, ARIA, reduced motion), internationalization
+(EN + ES), error UX (§119 — why / what / how-to-fix), a debug panel (§247),
+diagnostic log export (§246), and desktop packaging (Tauri) with a first-run
+installer (§252).
+
+Still deferred until a diffusion runtime exists (declared
+`VideoGenerationProvider` methods, disabled): true V2V (environment / clothing
+/ character swap), region-mask object replacement / inpainting, generative
+background replacement.

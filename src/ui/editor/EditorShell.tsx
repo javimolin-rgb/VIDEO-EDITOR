@@ -9,6 +9,7 @@ import { RightDock } from './RightDock';
 import { Timeline } from './Timeline';
 import { StudioPanel } from './StudioPanel';
 import { AiSetup } from './AiSetup';
+import { AutomationPanel } from './AutomationPanel';
 
 export function EditorShell() {
   usePlaybackLoop();
@@ -30,6 +31,14 @@ export function EditorShell() {
       <div className="editor" style={{ gridTemplateRows: '44px 1fr' }}>
         <TopBar />
         <AiSetup />
+      </div>
+    );
+  }
+  if (workspace === 'automation') {
+    return (
+      <div className="editor" style={{ gridTemplateRows: '44px 1fr' }}>
+        <TopBar />
+        <AutomationPanel />
       </div>
     );
   }

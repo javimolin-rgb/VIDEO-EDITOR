@@ -741,6 +741,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }, added.length > 1 ? `Import ${added.length} files` : `Import ${added[0]!.name}`, 'import');
     }
     set({ importProgress: null });
+    if (added.length > 0) {
+      onImportComplete?.([...new Set(added.map((a) => a.kind))]);
+    }
   },
 
   async removeAsset(assetId) {
@@ -881,4 +884,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 /** Discard the recovery snapshot once the user has resolved the prompt. */
 export async function dismissRecovery(projectId: string): Promise<void> {
   await clearRecovery(projectId);
+}
+
+/**
+ * Automation hook (spec §87 "WHEN video imported"). The automation store
+ * registers a callback here; keeping it out of the store avoids a circular
+ * import.
+ */
+let onImportComplete: ((kinds: string[]) => void) | null = null;
+export function setOnImportComplete(fn: ((kinds: string[]) => void) | null): void {
+  onImportComplete = fn;
 }

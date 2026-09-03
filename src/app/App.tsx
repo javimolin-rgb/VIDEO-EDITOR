@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore, dismissRecovery } from '@/state/projectStore';
+import { useAutomationStore } from '@/state/automationStore';
 import { revokeAllMediaUrls } from '@/state/mediaUrls';
 import { readRecovery } from '@/storage/repository';
 import { ProjectBrowser } from '@/ui/ProjectBrowser';
@@ -29,6 +30,11 @@ export function App() {
   }, [project?.meta.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => revokeAllMediaUrls(), []);
+
+  // Load recipes so `on-import` triggers work before the panel is opened.
+  useEffect(() => {
+    void useAutomationStore.getState().load();
+  }, []);
 
   return (
     <div className="app">

@@ -100,8 +100,11 @@ export async function assessGeneration(
       measured: { width, height, durationSec, meanLuma, flicker },
     };
   } finally {
+    // Cancel any in-flight range request before revoking, to avoid noisy 404s.
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
     URL.revokeObjectURL(url);
-    video.src = '';
   }
 }
 
