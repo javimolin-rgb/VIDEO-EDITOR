@@ -7,7 +7,7 @@
 
 import type { Timebase, Frame, FrameRange } from '@/lib/time';
 
-export const PROJECT_SCHEMA_VERSION = 3 as const;
+export const PROJECT_SCHEMA_VERSION = 4 as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Assets (spec §14, §214)
@@ -377,6 +377,29 @@ export interface ReferenceAsset {
   priority: ReferencePriority;
 }
 
+// ─── Storyboard (spec §38, §39, §131, §203, §204) ───────────────────────────
+
+export type ShotState = 'draft' | 'queued' | 'generating' | 'ready' | 'failed';
+
+export interface StoryboardShot {
+  id: string;
+  /** Position in the storyboard, 0-based. */
+  order: number;
+  title: string;
+  /** Free-text shot description (fed through the prompt engine). */
+  prompt: string;
+  durationSec: number;
+  camera: string;
+  style: string;
+  referenceAssetIds: string[];
+  /** Carry the previous shot's last frame as this shot's first frame (spec §40). */
+  carryContinuity: boolean;
+  /** Generated clip once ready. */
+  assetId: string | null;
+  lastGenerationId: string | null;
+  state: ShotState;
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
@@ -396,6 +419,8 @@ export interface VideoProject {
   assetIds: string[];
   /** Reference board for generative work (spec §23). */
   references: ReferenceAsset[];
+  /** Multi-shot plan for long-form generation (spec §204). */
+  storyboard: StoryboardShot[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

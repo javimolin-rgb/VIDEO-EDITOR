@@ -59,14 +59,19 @@ export class ProceduralVideoProvider implements VideoGenerationProvider {
   }
 
   async generateImageToVideo(
-    req: GenerationRequestBase & { firstFrameAssetId: string },
+    req: GenerationRequestBase & { firstFrameAssetId?: string; firstFrameDataUrl?: string },
     ctx: GenerationContext,
   ): Promise<GenerationResult> {
     const seed = req.seed ?? Math.floor(Math.random() * 2 ** 31);
     const params = deriveParams(req.prompt, seed);
 
     ctx.onPhase('preparing', 0.05, 'Loading first frame…');
-    const blob = await getAssetBlob(req.firstFrameAssetId).catch(() => null);
+    let blob: Blob | null = null;
+    if (req.firstFrameDataUrl) {
+      blob = await fetch(req.firstFrameDataUrl).then((r) => r.blob()).catch(() => null);
+    } else if (req.firstFrameAssetId) {
+      blob = await getAssetBlob(req.firstFrameAssetId).catch(() => null);
+    }
     const bmp = blob ? await createImageBitmap(blob).catch(() => null) : null;
     if (!bmp) {
       throw new Error('Could not load the first-frame image.');
@@ -142,7 +147,7 @@ export const proceduralProvider = new ProceduralVideoProvider();
 export function requestHash(
   providerId: string,
   kind: string,
-  req: GenerationRequestBase & { firstFrameAssetId?: string },
+  req: GenerationRequestBase & { firstFrameAssetId?: string; firstFrameDataUrl?: string },
 ): string {
   const key = JSON.stringify({
     providerId,
@@ -156,7 +161,7 @@ export function requestHash(
     refs: (req.references ?? [])
       .map((r) => `${r.assetId}:${r.role}:${r.priority}`)
       .sort(),
-    first: req.firstFrameAssetId ?? '',
+    first: req.firstFrameAssetId ?? (req.firstFrameDataUrl ? 'inline' : ''),
   });
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (Math.imul(31, hash) + key.charCodeAt(i)) | 0;

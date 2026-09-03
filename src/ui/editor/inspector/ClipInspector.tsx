@@ -3,6 +3,7 @@ import { useProjectStore } from '@/state/projectStore';
 import { EFFECT_DEFS, EFFECT_LIST, clampEffectParam, createEffect } from '@/domain/effects/registry';
 import type { Clip, EffectType } from '@/domain/types';
 import { KeyframeButton } from './KeyframeButton';
+import { AiClipTools } from './AiClipTools';
 
 function Slider({
   label,
@@ -294,6 +295,9 @@ export function ClipInspector({ clip, assetName }: { clip: Clip; assetName: stri
           </div>
         );
       })}
+
+      <h4 style={{ margin: '14px 0 6px' }}>AI</h4>
+      <AiClipTools clip={clip} />
 
       <div className="muted mono" style={{ fontSize: 11, marginTop: 10 }}>
         src {clip.sourceIn}–{clip.sourceOut}f · @{clip.timelineStart}f · ◇ = add keyframe at playhead

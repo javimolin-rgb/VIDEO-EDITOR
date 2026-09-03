@@ -61,6 +61,7 @@ function baseJob() {
     providerId: 'fake',
     parentGenerationId: null,
     placement: null,
+    storyboardShotId: null,
     request: req,
   };
 }

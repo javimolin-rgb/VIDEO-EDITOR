@@ -6,6 +6,7 @@ import { route, type GenerativeTask } from '@/ai/orchestrator';
 import { PromptForm } from './studio/PromptForm';
 import { ReferenceBoard } from './studio/ReferenceBoard';
 import { GenerationHistory } from './studio/GenerationHistory';
+import { StoryboardView } from './studio/StoryboardView';
 import type { GenKind } from '@/ai/gen/queue';
 
 const MODES: Array<{ id: string; label: string; task: GenerativeTask; kind?: GenKind }> = [
@@ -28,6 +29,8 @@ export function StudioPanel() {
   const assets = useProjectStore((s) => s.assets);
   const mode = useGenStore((s) => s.mode);
   const setMode = useGenStore((s) => s.setMode);
+  const studioView = useGenStore((s) => s.studioView);
+  const setStudioView = useGenStore((s) => s.setStudioView);
   const reuseOffer = useGenStore((s) => s.reuseOffer);
   const dismissReuse = useGenStore((s) => s.dismissReuse);
   const lastResultAssetId = useGenStore((s) => s.lastResultAssetId);
@@ -56,10 +59,32 @@ export function StudioPanel() {
     <div className="panel-body" style={{ maxWidth: 1180, margin: '0 auto' }}>
       <div className="row">
         <h2>AI Video Studio</h2>
+        <div className="row" style={{ gap: 4, marginLeft: 16 }}>
+          <button
+            className={studioView === 'generate' ? 'primary' : ''}
+            onClick={() => setStudioView('generate')}
+          >
+            Generate
+          </button>
+          <button
+            className={studioView === 'storyboard' ? 'primary' : ''}
+            onClick={() => setStudioView('storyboard')}
+          >
+            Storyboard
+          </button>
+        </div>
         <span className="spacer" />
         <span className="pill good">Procedural generator ready · local · no model</span>
       </div>
 
+      {studioView === 'storyboard' && (
+        <div style={{ marginTop: 14 }}>
+          <StoryboardView />
+        </div>
+      )}
+
+      {studioView === 'generate' && (
+      <>
       <div className="row" style={{ gap: 6, margin: '12px 0', flexWrap: 'wrap' }}>
         {MODES.map((m) => {
           const r = route(m.task);
@@ -131,6 +156,8 @@ export function StudioPanel() {
 
         <GenerationHistory />
       </div>
+      </>
+      )}
 
       {reuseOffer && (
         <div className="modal-backdrop" onClick={dismissReuse}>

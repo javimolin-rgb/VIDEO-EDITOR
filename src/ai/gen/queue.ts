@@ -26,11 +26,13 @@ export interface GenJob {
   kind: GenKind;
   label: string;
   providerId: string;
-  request: GenerationRequestBase & { firstFrameAssetId?: string };
+  request: GenerationRequestBase & { firstFrameAssetId?: string; firstFrameDataUrl?: string };
   /** For variations / regenerations — links into the generation graph (spec §75). */
   parentGenerationId: string | null;
   /** When set, the result is dropped straight onto the timeline (spec §41, §208). */
   placement: { trackId: string; atFrame: number } | null;
+  /** When set, the result is bound back to this storyboard shot (spec §38). */
+  storyboardShotId: string | null;
   status: JobStatus;
   createdAt: number;
   startedAt: number | null;
@@ -131,7 +133,10 @@ export class GenerationQueue {
       } else {
         if (!provider.generateImageToVideo) throw new Error('Provider cannot do image-to-video.');
         result = await provider.generateImageToVideo(
-          next.request as GenerationRequestBase & { firstFrameAssetId: string },
+          next.request as GenerationRequestBase & {
+            firstFrameAssetId?: string;
+            firstFrameDataUrl?: string;
+          },
           ctx,
         );
       }

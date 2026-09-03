@@ -6,12 +6,13 @@ A **local-first** professional video editor with an **extensible local generativ
 > usable offline; generative features are optional adapters over local models.
 
 This repository is being built in phases against
-[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1 (Foundation), 2 (Professional
-editing), 3 (Local AI) and 4 (Generative video) are implemented.**
+[`docs/ROADMAP.md`](docs/ROADMAP.md). **Phases 1–5 are implemented**
+(Foundation, Professional editing, Local AI, Generative video, Advanced
+generation).
 
 ---
 
-## What works today (Phases 1–4)
+## What works today (Phases 1–5)
 
 | Area | Status |
 | --- | --- |
@@ -40,14 +41,18 @@ editing), 3 (Local AI) and 4 (Generative video) are implemented.**
 | **Generative video** | ✅ **Text→Video** & **Image→Video** — real seeded frame synthesis → MP4, runs locally, no model, no download |
 | **Generation pipeline** | ✅ prompt engine · job queue (phases/cancel) · quality control · history graph · variations · reference board |
 | **Generation ↔ timeline** | ✅ result is a normal asset; "Fill gap with AI" drops a bridge clip into a timeline gap |
-| AI Studio | ✅ full workspace — prompt form, references, live preview, job list, history; **honest disabled states** for unbuilt modes |
+| **Storyboard mode** | ✅ shot list → per-shot generate → assemble to timeline; carry-continuity seeds each shot from the previous shot's last frame |
+| **Extend / look-match / auto-reframe** | ✅ continuation from last frame; colour-grade a clip to match a reference; subject-tracked crop to a new aspect |
+| **Continuity engine** | ✅ palette/luma score between adjacent clips, jarring-cut flags |
+| AI Studio | ✅ Generate + Storyboard views — prompt form, references, live preview, job list, history; **honest disabled states** for unbuilt modes |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 
 Slip/slide/roll trims, parametric EQ / compressor / ducking, colour curves /
-HSL / LUTs / shot-match, compound clips, proxies; neural TTS file render,
-visual-embedding search; Video→Video, Extend, Region edit, Generative fill,
-Storyboard→Video, AI Director. See the roadmap.
+HSL / LUTs, compound clips, proxies; neural TTS file render, visual-embedding
+search; true diffusion Video→Video (environment/clothing/character swap),
+region-mask object replacement, generative background replacement; AI Director,
+automation recipes. See the roadmap.
 
 ---
 

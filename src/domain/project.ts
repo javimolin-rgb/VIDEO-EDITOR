@@ -86,6 +86,7 @@ export function createProject(opts: CreateProjectOptions = {}): VideoProject {
     brandKit: { logos: [], fonts: [], colors: [], notes: '' },
     assetIds: [],
     references: [],
+    storyboard: [],
   };
 }
 

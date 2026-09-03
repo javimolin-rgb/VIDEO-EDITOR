@@ -60,6 +60,7 @@ export function migrateProject(input: VideoProject): VideoProject {
     ...input,
     meta: { ...input.meta, schemaVersion: PROJECT_SCHEMA_VERSION },
     references: input.references ?? [],
+    storyboard: input.storyboard ?? [],
     timeline: {
       ...timeline,
       tracks: timeline.tracks.map((t) => migrateTrack(t as LegacyTrack)),

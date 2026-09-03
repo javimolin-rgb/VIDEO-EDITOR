@@ -39,8 +39,22 @@ from an opt-in screen, ship it disabled by default. The queue, prompt engine,
 QC, history, reference board and Studio UI are unchanged — capabilities drive
 which modes light up.
 
-## Not yet (Phase 5+)
+## Phase 5 additions — advanced generation
 
-Video→Video, Extend, Region edit, Generative fill / background, storyboard →
-video, AI Director. Each is an interface method already declared; the Studio
-shows them disabled until a provider implements them.
+| Module | Role |
+| --- | --- |
+| `domain/storyboard.ts` | Pure shot-list ops (add / update / move / remove, dense `order`). `project.storyboard` (schema v4). |
+| `ui/editor/studio/StoryboardView.tsx` | Shot cards, per-shot Generate (queue), Generate-all, **Assemble → timeline**. |
+| `genStore.generateShot` | Builds a shot request; if the previous shot is ready and *carry continuity* is on, extracts its last frame → **I2V** (spec §40). `job.storyboardShotId` binds the result back to the shot. |
+| `genStore.extendClip` | Last frame of a clip → procedural I2V → placed right after the clip (spec §74). |
+| `ai/style.ts` + `video/sampleFrames.ts` | Sample frames → `LookStats`; `matchLook(src, tgt, strength)` → `ColorGrade`; `lookDistance`. Powers "Match look" (spec §64, §185, §226). |
+| `video/reframe.ts` | `salientCenter` (edge-energy centroid) + smoothed crop path → `autoReframe` renders a new clip at the target aspect (spec §83). |
+| `ai/continuity.ts` | `analyzeSequence` — per-pair + overall palette/luma continuity, jarring-cut flags (spec §40). |
+
+## Not yet (Phase 6+)
+
+True diffusion Video→Video (environment / clothing / character swap),
+region-mask object replacement / inpainting, generative background
+replacement, AI Director, automation recipes. Each is a declared interface
+method or a planned orchestration layer; the UI stays honest until a backend
+implements it.

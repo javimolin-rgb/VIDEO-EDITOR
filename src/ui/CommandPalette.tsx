@@ -83,6 +83,35 @@ export function CommandPalette() {
           void useGenStore.getState().fillGap();
         },
       },
+      {
+        id: 'storyboard',
+        title: 'Open Storyboard',
+        run: () => {
+          useGenStore.getState().setStudioView('storyboard');
+          ui().setWorkspace('studio');
+        },
+      },
+      {
+        id: 'extend-clip',
+        title: 'Extend selected clip (+3s)',
+        run: () => {
+          const id = ui().selectedClipIds[0];
+          if (id) void useGenStore.getState().extendClip(id, 3);
+        },
+      },
+      {
+        id: 'reframe-clip',
+        title: 'Auto-reframe selected clip to 9:16',
+        run: () => {
+          const id = ui().selectedClipIds[0];
+          if (id) void useGenStore.getState().autoReframeClip(id, '9:16');
+        },
+      },
+      {
+        id: 'continuity',
+        title: 'Analyse timeline continuity',
+        run: () => void useGenStore.getState().analyzeContinuity(),
+      },
       { id: 'ai-setup', title: 'Open AI Setup (local models)', run: () => ui().setWorkspace('ai-setup') },
       { id: 'edit', title: 'Back to editor', run: () => ui().setWorkspace('edit') },
     ],

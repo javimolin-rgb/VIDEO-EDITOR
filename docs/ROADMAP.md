@@ -9,8 +9,8 @@ recover and pass its acceptance tests before the next begins (§258, §259).
 | **2** | Professional editing | **done** |
 | **3** | Local AI (on-device runtime, transcription, cleanup, search) | **done** |
 | **4** | Generative video (T2V/I2V, queue, QC, history, references) | **done** |
-| 5 | Advanced generation (V2V, extend, region edit, bg, fill, camera, storyboard) | next |
-| 6 | AI Director (script→storyboard→video, auto-edit, B-roll, continuity, campaign) | planned |
+| **5** | Advanced generation (storyboard, extend, look-match, auto-reframe, continuity) | **done** |
+| 6 | AI Director (script→storyboard→video, auto-edit, B-roll, campaign) | next |
 | 7 | Automation (recipes, AI plans, autonomous workflows, social repurposing) | planned |
 | 8 | Polish (perf, a11y, i18n, errors, docs, packaging, installer) | planned |
 
@@ -167,8 +167,48 @@ Delivered — see `GENERATION_ENGINE.md`:
       branching in business logic.
 - [x] Nothing is faked — modes without a backend are disabled with a reason.
 
-## Phases 5–8
+## Phase 5 — Advanced generation ✅
+
+Delivered — all local, all real:
+
+- **Storyboard mode** (`domain/storyboard.ts` + `ui/editor/studio/StoryboardView.tsx`,
+  spec §38, §203, §204): shot list on the project (schema **v4** + migration),
+  add / edit / reorder / remove, per-shot Generate through the Phase 4 queue,
+  "Generate all", "Assemble → timeline" (places ready shots end-to-end).
+- **Continuity engine** (`ai/continuity.ts`, spec §40): palette/luma distance
+  between consecutive clips → per-pair + overall score, jarring-cut flags;
+  a shot with **carry continuity** is seeded with the previous shot's final
+  frame (I2V) so looks track forward.
+- **Extend Video** (`genStore.extendClip`, spec §74): grabs the clip's last
+  frame → procedural I2V continuation → dropped onto the same track right after
+  the clip.
+- **Look / shot match** (`ai/style.ts` + `sampleFrames.ts`, spec §64, §185,
+  §226): samples frames of source + reference, measures luma / contrast /
+  saturation / white balance, derives a `ColorGrade` (strength slider),
+  applies it to the clip. Pure measurement, tested.
+- **Auto-reframe** (`video/reframe.ts`, spec §83): edge-energy saliency
+  centroid + temporal smoothing → animated crop from one aspect to another →
+  new clip. Face model can later replace the saliency estimate.
+- Per-clip ops live in the Inspector's **AI** section; storyboard + continuity
+  in the Studio's **Storyboard** view; all also in the ⌘K palette.
+
+### Phase 5 acceptance (spec §262, §271, §278)
+
+- [x] Build a storyboard, generate a shot, assemble to the timeline. (verified:
+      shot generated a real 1920×1080 MP4, warm-golden look from the prompt,
+      assembled onto V2)
+- [x] Shot N with carry-continuity is seeded from shot N-1's last frame.
+- [x] Look-match produces a `ColorGrade` that moves the source toward the
+      reference, scaled by strength.
+- [x] Auto-reframe produces a new clip at the target aspect with the subject
+      kept in frame.
+
+## Phases 6–8
 
 Follow the master spec sections §20–§255. Every new capability appears in the UI
 only when it actually works; otherwise it stays a labelled disabled state
-(§257).
+(§257). Deferred within Phase 5's scope and now folded into later work: true
+diffusion V2V (environment/clothing/character swap), region-mask object
+replacement / inpainting, generative background replacement — each is a
+declared `VideoGenerationProvider` method, disabled until a runtime implements
+it.

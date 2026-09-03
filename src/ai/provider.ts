@@ -125,7 +125,7 @@ export interface VideoGenerationProvider {
 
   generateTextToVideo?(req: GenerationRequestBase, ctx: GenerationContext): Promise<GenerationResult>;
   generateImageToVideo?(
-    req: GenerationRequestBase & { firstFrameAssetId: string },
+    req: GenerationRequestBase & { firstFrameAssetId?: string; firstFrameDataUrl?: string },
     ctx: GenerationContext,
   ): Promise<GenerationResult>;
   generateReferenceVideo?(req: GenerationRequestBase, ctx: GenerationContext): Promise<GenerationResult>;

@@ -34,10 +34,12 @@ import type {
   ReferenceAsset,
   ReferencePriority,
   ReferenceRole,
+  StoryboardShot,
   TrackKind,
   TransitionType,
   VideoProject,
 } from '@/domain/types';
+import * as sb from '@/domain/storyboard';
 import { currentParamValue, sampleParam } from '@/domain/keyframes';
 import { clipTimelineRange } from '@/domain/types';
 import { parseCaptions } from '@/video/captions';
@@ -160,6 +162,14 @@ interface ProjectState {
   addReference: (assetId: string, role: ReferenceRole, priority: ReferencePriority) => void;
   updateReference: (assetId: string, patch: Partial<Omit<ReferenceAsset, 'assetId'>>) => void;
   removeReference: (assetId: string) => void;
+
+  // storyboard (spec §38)
+  addStoryboardShot: (partial?: Partial<StoryboardShot>) => void;
+  updateStoryboardShot: (id: string, patch: Partial<Omit<StoryboardShot, 'id'>>) => void;
+  /** Non-undoable shot update, for generation state transitions. */
+  setStoryboardShotState: (id: string, patch: Partial<Omit<StoryboardShot, 'id'>>) => void;
+  removeStoryboardShot: (id: string) => void;
+  moveStoryboardShot: (id: string, dir: -1 | 1) => void;
 
   // project meta / settings
   renameProject: (name: string) => void;
@@ -789,6 +799,39 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     get().mutate((draft) => {
       draft.references = draft.references.filter((r) => r.assetId !== assetId);
     }, 'Remove reference');
+  },
+
+  addStoryboardShot(partial) {
+    get().mutate((draft) => {
+      draft.storyboard = sb.addShot(draft.storyboard, partial);
+    }, 'Add shot');
+  },
+
+  updateStoryboardShot(id, patch) {
+    get().mutate((draft) => {
+      draft.storyboard = sb.updateShot(draft.storyboard, id, patch);
+    }, 'Edit shot');
+  },
+
+  setStoryboardShotState(id, patch) {
+    const { project } = get();
+    if (!project) return;
+    const next = cloneProject(project);
+    next.storyboard = sb.updateShot(next.storyboard, id, patch);
+    set({ project: next });
+    scheduleAutosave(next);
+  },
+
+  removeStoryboardShot(id) {
+    get().mutate((draft) => {
+      draft.storyboard = sb.removeShot(draft.storyboard, id);
+    }, 'Remove shot');
+  },
+
+  moveStoryboardShot(id, dir) {
+    get().mutate((draft) => {
+      draft.storyboard = sb.moveShot(draft.storyboard, id, dir);
+    }, 'Reorder shots');
   },
 
   // ─── meta / settings ──────────────────────────────────────────────────────
