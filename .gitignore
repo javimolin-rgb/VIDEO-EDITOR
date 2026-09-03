@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vite
+coverage
+node_modules/.tmp
+
+# app-data / local model & media storage (spec §245)
+/app-data
+/local-service/models
+/local-service/cache
+/local-service/generated
+/local-service/.venv
+__pycache__
+*.pyc
+
+# editor
+.idea
+.vscode/*
+!.vscode/extensions.json
