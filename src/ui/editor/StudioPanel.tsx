@@ -81,7 +81,11 @@ export function StudioPanel() {
           </button>
         </div>
         <span className="spacer" />
-        <span className="pill good">Procedural generator ready · local · no model</span>
+        <span className="pill good">
+          {route('text-to-video').provider?.id === 'comfyui'
+            ? 'ComfyUI backend · local diffusion'
+            : 'Procedural generator · local · no model'}
+        </span>
       </div>
 
       {studioView === 'storyboard' && (

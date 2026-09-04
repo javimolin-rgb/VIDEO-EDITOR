@@ -10,6 +10,7 @@
 
 import { localProvider } from './providers/local/localProvider';
 import { proceduralProvider } from './providers/procedural/proceduralProvider';
+import { comfyUIProvider } from './providers/comfyui/comfyProvider';
 import type { VideoGenerationProvider } from './provider';
 
 export type GenerativeTask =
@@ -20,8 +21,12 @@ export type GenerativeTask =
   | 'extend-video'
   | 'region-edit';
 
-/** Ordered by preference. A native diffusion adapter would be unshifted here. */
-const providers: VideoGenerationProvider[] = [localProvider, proceduralProvider];
+/**
+ * Ordered by preference. ComfyUI (a real diffusion backend) routes ahead of
+ * the procedural generator whenever it is enabled + reachable + has a
+ * workflow; otherwise its capabilities are all false and it is skipped.
+ */
+const providers: VideoGenerationProvider[] = [localProvider, comfyUIProvider, proceduralProvider];
 
 export function registerProvider(provider: VideoGenerationProvider, front = false): void {
   if (providers.some((p) => p.id === provider.id)) return;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { detectHardware, type HardwareProfile } from '@/ai/hardware';
 import { listModels, type ModelTask } from '@/ai/registry';
 import { OnDeviceModels } from './OnDeviceModels';
+import { ComfyUISetup } from './ComfyUISetup';
 
 const TASK_LABEL: Record<ModelTask, string> = {
   video: 'Video models',
@@ -62,6 +63,8 @@ export function AiSetup() {
       )}
 
       <OnDeviceModels />
+
+      <ComfyUISetup />
 
       <h4 style={{ margin: '22px 0 8px' }}>Native runtime models (via local service)</h4>
       <p className="muted" style={{ fontSize: 12 }}>
