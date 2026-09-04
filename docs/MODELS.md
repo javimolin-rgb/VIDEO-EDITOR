@@ -33,11 +33,17 @@ runtime models**, with real licence / VRAM / hardware data
 
 ## Generative video today
 
-The **procedural generator** (`src/ai/providers/procedural/`) needs no model
-and no download — it synthesises frames from the structured prompt. It powers
-Text→Video, Image→Video, storyboard shots, Extend, Fill-gap and B-roll. It is
-clearly labelled "no model" and is not a diffusion model; a diffusion adapter
-routes ahead of it once a native runtime is connected (see `PROVIDERS.md`).
+Two backends, chosen automatically by capability (`src/ai/orchestrator.ts`):
+
+1. **ComfyUI backend** — *real diffusion*, opt-in. Run a local ComfyUI server
+   with LTX-Video / Wan 2.1 / HunyuanVideo, paste an API-format workflow, map
+   its prompt / size / seed inputs. Routes ahead of the procedural generator
+   whenever it is enabled + reachable + configured. Setup: `COMFYUI.md`.
+2. **Procedural generator** (`src/ai/providers/procedural/`) — the always-on
+   fallback. No model, no download; synthesises frames from the structured
+   prompt. Powers Text→Video, Image→Video, storyboard shots, Extend, Fill-gap
+   and B-roll. Clearly labelled "no model" — it is **not** a diffusion model,
+   so its output is abstract motion, not photoreal scenes.
 
 ## Choosing a first diffusion model
 

@@ -39,7 +39,7 @@ stays a declared, disabled interface method — never faked.
 | **Shot detection** | ✅ on-device histogram frame-diff → shot markers |
 | AI Setup | ✅ real on-device model download / remove / progress; native-runtime catalogue listed (disabled) |
 | AI provider abstraction | ✅ capability-based, model router; procedural generator + disabled native client |
-| **Generative video** | ✅ **Text→Video** & **Image→Video** — real seeded frame synthesis → MP4, runs locally, no model, no download |
+| **Generative video** | ✅ **Text→Video** & **Image→Video** — procedural seeded frame synthesis (no model, no download) **or** a real local diffusion model via the **ComfyUI backend** (opt-in, [`docs/COMFYUI.md`](docs/COMFYUI.md)) |
 | **Generation pipeline** | ✅ prompt engine · job queue (phases/cancel) · quality control · history graph · variations · reference board |
 | **Generation ↔ timeline** | ✅ result is a normal asset; "Fill gap with AI" drops a bridge clip into a timeline gap |
 | **Storyboard mode** | ✅ shot list → per-shot generate → assemble to timeline; carry-continuity seeds each shot from the previous shot's last frame |
@@ -55,15 +55,18 @@ stays a declared, disabled interface method — never faked.
 | **Accessibility** | ✅ dark / high-contrast / light themes, UI scale, reduced-motion (setting or OS), focus outlines |
 | **Languages** | ✅ English + Spanish, per-key fallback |
 | **Diagnostics** | ✅ Settings → Diagnostics: FPS, model states, queue, storage, logs; one-click JSON export (no media) |
-| **Desktop** | ✅ Tauri scaffold (`npm run tauri`), thin shell over the same web app |
+| **Desktop app** | ✅ Tauri v2 shell — `npm run app:build` → native `.app` / `.dmg` (needs Rust once); [`docs/PACKAGING.md`](docs/PACKAGING.md) |
+| **Cloud sync** | ✅ optional — push a portable project package to a GitHub repo you own (your token, `api.github.com` only), manual or auto-on-save; [`docs/CLOUD_SYNC.md`](docs/CLOUD_SYNC.md) |
 
 ### Not yet (later phases — surfaced as disabled states, never faked)
 
 Slip/slide/roll trims, parametric EQ / compressor / ducking, colour curves /
 HSL / LUTs, compound clips, proxies; neural TTS file render, visual-embedding
 search; true diffusion Video→Video (environment/clothing/character swap),
-region-mask object replacement, generative background replacement; AI Director,
-automation recipes. See the roadmap.
+region-mask object replacement, generative background replacement — these stay
+declared, disabled interface methods until a diffusion runtime that can do them
+is wired in (the ComfyUI backend covers Text→Video / Image→Video today). See the
+roadmap.
 
 ---
 
@@ -86,6 +89,22 @@ npm run lint
 
 Requires Node 20+. A recent Chromium-based browser is recommended for the
 preview/export pipeline (`MediaRecorder`, `captureStream`, WebAudio).
+
+### As a desktop app
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # once
+npm run app:dev      # hot-reload native window
+npm run app:build    # → src-tauri/target/release/bundle/  (.app + .dmg on macOS)
+```
+
+### Real diffusion generation (optional)
+
+Run a local [ComfyUI](https://github.com/comfyanonymous/ComfyUI) with a video
+model, then **AI Setup → ComfyUI backend**: paste an API-format workflow and map
+its prompt / size / seed inputs. See [`docs/COMFYUI.md`](docs/COMFYUI.md).
+Without it, generation uses the built-in procedural generator (abstract motion,
+not photoreal).
 
 ---
 

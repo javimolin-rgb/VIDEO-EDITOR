@@ -33,6 +33,23 @@ the routing order, always the fallback. Its capabilities are all `false` until:
 Until then the Studio shows honest disabled states — no fake output, ever
 (spec §159).
 
+## Built-in: `procedural`
+
+`src/ai/providers/procedural/`. Always registered, last in the routing order.
+Needs no model and no download — it synthesises frames from the structured
+prompt (seeded, deterministic). It is **not** a diffusion model and is labelled
+"no model" everywhere it appears. It exists so generative modes are never dead.
+
+## Built-in (opt-in): `comfyui`
+
+`src/ai/providers/comfyui/`. A **real local diffusion backend** — it drives a
+ComfyUI server the user runs, with the user's own API-format workflow. Its
+`capabilities` are all `false` until the adapter is enabled in **AI Setup →
+ComfyUI backend** *and* a workflow is configured; then `textToVideo` /
+`imageToVideo` turn on and it routes **ahead of** `procedural`. Removing the
+folder leaves the build working (orchestrator is the only import site). Full
+setup: [`COMFYUI.md`](COMFYUI.md).
+
 ## Adding an optional external provider (future)
 
 1. Create `src/ai/providers/<name>/<name>Provider.ts` implementing the
