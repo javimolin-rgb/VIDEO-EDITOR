@@ -121,14 +121,7 @@ export function StudioPanel() {
         })}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '340px 1fr 340px',
-          gap: 14,
-          alignItems: 'start',
-        }}
-      >
+      <div className="studio-grid">
         <div className="col" style={{ gap: 16 }}>
           <PromptForm />
           <ReferenceBoard />

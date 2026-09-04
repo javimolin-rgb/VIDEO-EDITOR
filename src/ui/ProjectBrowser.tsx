@@ -46,16 +46,20 @@ export function ProjectBrowser() {
 
   return (
     <div className="browser">
-      <div className="row">
+      <div className="hero">
+        <div className="mark" aria-hidden>
+          🎬
+        </div>
         <div>
           <h1>{t('app.title')}</h1>
           <div className="sub">{t('app.tagline')}</div>
         </div>
-        <div className="spacer" />
-        <button onClick={() => void openSample()}>{t('browser.sampleProject')}</button>
-        <button className="primary" onClick={() => setCreating(true)}>
-          + {t('browser.newProject')}
-        </button>
+        <div className="hero-actions">
+          <button onClick={() => void openSample()}>✨ {t('browser.sampleProject')}</button>
+          <button className="primary" onClick={() => setCreating(true)}>
+            ＋ {t('browser.newProject')}
+          </button>
+        </div>
       </div>
 
       {rows.length === 0 && (
@@ -68,12 +72,12 @@ export function ProjectBrowser() {
         {rows.map((row) => (
           <div key={row.id} className="project-card" onClick={() => void openProject(row.id)}>
             <h3>{row.name}</h3>
-            <div className="meta">
-              {row.data.settings.aspectRatio} · {row.data.settings.fps} fps ·{' '}
-              {row.data.timeline.clips.length} clips
-              <br />
-              updated {new Date(row.updatedAt).toLocaleString()}
+            <div className="row" style={{ gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
+              <span className="chip">{row.data.settings.aspectRatio}</span>
+              <span className="chip">{row.data.settings.fps} fps</span>
+              <span className="chip">{row.data.timeline.clips.length} clips</span>
             </div>
+            <div className="meta">updated {new Date(row.updatedAt).toLocaleString()}</div>
             <div className="card-actions" onClick={(e) => e.stopPropagation()}>
               <button
                 className="ghost"

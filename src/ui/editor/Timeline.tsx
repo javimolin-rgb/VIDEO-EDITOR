@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useLayoutMode } from '@/ui/hooks/useMediaQuery';
 import { clipTimelineRange, type Clip, type TransitionType } from '@/domain/types';
 import { contentEndFrame } from '@/domain/timeline/operations';
 import { formatClock } from '@/lib/time';
@@ -39,10 +40,25 @@ export function Timeline() {
   const selectedTransitionId = useUIStore((s) => s.selectedTransitionId);
   const setActiveTrack = useUIStore((s) => s.setActiveTrack);
   const activeTrackId = useUIStore((s) => s.activeTrackId);
+  const timelineExpanded = useUIStore((s) => s.timelineExpanded);
+  const toggleTimelineExpanded = useUIStore((s) => s.toggleTimelineExpanded);
 
+  const mode = useLayoutMode();
+  const isMobile = mode === 'mobile';
   const lanesRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragMode | null>(null);
   const [dragOverTrack, setDragOverTrack] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [moreOpen]);
 
   const timeline = project?.timeline;
   const end = useMemo(
@@ -149,78 +165,155 @@ export function Timeline() {
   return (
     <div className="timeline">
       <div className="timeline-toolbar">
-        <button onClick={zoomOut} title="Zoom out (-)">
-          −
-        </button>
-        <input
-          type="range"
-          min={0.02}
-          max={4}
-          step={0.01}
-          value={pxPerFrame}
-          onChange={(e) => setZoom(Number(e.target.value))}
-          style={{ width: 120 }}
-        />
-        <button onClick={zoomIn} title="Zoom in (+)">
-          +
-        </button>
-        <button className={snapEnabled ? 'primary' : ''} onClick={toggleSnap} title="Toggle snapping">
-          Snap
-        </button>
-        <div style={{ width: 1, height: 18, background: 'var(--line)' }} />
-        <button onClick={() => splitAtPlayhead(selectedClipIds)} title="Split at playhead (S)">
-          Split
-        </button>
-        <button onClick={addMarkerAtPlayhead} title="Add marker (M)">
-          Marker
-        </button>
-        <button
-          disabled={selectedClipIds.length !== 1 || localJob?.kind === 'shots'}
-          title="Detect shot boundaries in the selected video clip (local, no model)"
-          onClick={async () => {
-            const id = selectedClipIds[0];
-            if (!id) return;
-            const n = await detectShotsForClip(id, 0.45);
-            pushToast(n > 0 ? 'success' : 'info', n > 0 ? `Added ${n} shot markers.` : 'No cuts detected.');
-          }}
-        >
-          {localJob?.kind === 'shots' ? 'Analysing…' : 'Detect shots'}
-        </button>
-        <button
-          disabled={selectedClipIds.length !== 1}
-          onClick={() => selectedClipIds[0] && duplicateClip(selectedClipIds[0])}
-        >
-          Duplicate
-        </button>
-        <button
-          disabled={selectedClipIds.length !== 1}
-          onClick={() => selectedClipIds[0] && rippleDelete(selectedClipIds[0])}
-          title="Delete and close the gap"
-        >
-          Ripple delete
-        </button>
-        <button
-          disabled={!selectedPair}
-          title="Add a transition across the boundary of the two selected clips"
-          onClick={() => {
-            if (selectedPair) {
-              addTransition(
-                selectedPair.from.id,
-                selectedPair.to.id,
-                'dissolve' as TransitionType,
-                Math.round(timeline.timebase.fps * 0.5),
-              );
-            }
-          }}
-        >
-          + Transition
-        </button>
+        <div className="tbar-group">
+          <button className="icon-btn" onClick={zoomOut} title="Zoom out (-)" aria-label="Zoom out">
+            −
+          </button>
+          {!isMobile && (
+            <input
+              type="range"
+              className="tbar-zoom"
+              min={0.02}
+              max={4}
+              step={0.01}
+              value={pxPerFrame}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              aria-label="Timeline zoom"
+            />
+          )}
+          <button className="icon-btn" onClick={zoomIn} title="Zoom in (+)" aria-label="Zoom in">
+            +
+          </button>
+          <button
+            className={snapEnabled ? 'active' : ''}
+            onClick={toggleSnap}
+            title="Toggle snapping"
+            aria-pressed={snapEnabled}
+            style={{ padding: '5px 10px' }}
+          >
+            Snap
+          </button>
+        </div>
+
+        <div className="tbar-group">
+          <button
+            className="icon-btn"
+            onClick={() => splitAtPlayhead(selectedClipIds)}
+            title="Split at playhead (S)"
+            aria-label="Split"
+          >
+            ✂
+          </button>
+          <button
+            className="icon-btn"
+            disabled={selectedClipIds.length !== 1}
+            onClick={() => selectedClipIds[0] && duplicateClip(selectedClipIds[0])}
+            title="Duplicate clip"
+            aria-label="Duplicate clip"
+          >
+            ⧉
+          </button>
+          <button
+            className="icon-btn danger"
+            disabled={selectedClipIds.length !== 1}
+            onClick={() => selectedClipIds[0] && rippleDelete(selectedClipIds[0])}
+            title="Delete clip and close the gap"
+            aria-label="Ripple delete"
+          >
+            🗑
+          </button>
+        </div>
+
         <div className="spacer" />
-        <button onClick={() => addTrack('video')}>+ Video</button>
-        <button onClick={() => addTrack('audio')}>+ Audio</button>
-        <button onClick={() => addTrack('adjustment')} title="Adjustment layer (spec §112)">
-          + Adjust
-        </button>
+
+        <div className="tbar-group menu-wrap" ref={moreRef}>
+          <button
+            className={`icon-btn ${moreOpen ? 'active' : ''}`}
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-label="More timeline actions"
+            aria-expanded={moreOpen}
+          >
+            ⋯
+          </button>
+          {moreOpen && (
+            <div className="menu right" style={{ bottom: '100%', top: 'auto', marginBottom: 6 }}>
+              <button
+                onClick={() => {
+                  addMarkerAtPlayhead();
+                  setMoreOpen(false);
+                }}
+              >
+                ⚑ Add marker (M)
+              </button>
+              <button
+                disabled={selectedClipIds.length !== 1 || localJob?.kind === 'shots'}
+                onClick={async () => {
+                  const id = selectedClipIds[0];
+                  setMoreOpen(false);
+                  if (!id) return;
+                  const n = await detectShotsForClip(id, 0.45);
+                  pushToast(
+                    n > 0 ? 'success' : 'info',
+                    n > 0 ? `Added ${n} shot markers.` : 'No cuts detected.',
+                  );
+                }}
+              >
+                {localJob?.kind === 'shots' ? '⏳ Analysing…' : '◫ Detect shots'}
+              </button>
+              <button
+                disabled={!selectedPair}
+                onClick={() => {
+                  if (selectedPair) {
+                    addTransition(
+                      selectedPair.from.id,
+                      selectedPair.to.id,
+                      'dissolve' as TransitionType,
+                      Math.round(timeline.timebase.fps * 0.5),
+                    );
+                  }
+                  setMoreOpen(false);
+                }}
+              >
+                ⇄ Add transition
+              </button>
+              <div className="sep" />
+              <button
+                onClick={() => {
+                  addTrack('video');
+                  setMoreOpen(false);
+                }}
+              >
+                ＋ Video track
+              </button>
+              <button
+                onClick={() => {
+                  addTrack('audio');
+                  setMoreOpen(false);
+                }}
+              >
+                ＋ Audio track
+              </button>
+              <button
+                onClick={() => {
+                  addTrack('adjustment');
+                  setMoreOpen(false);
+                }}
+              >
+                ＋ Adjustment layer
+              </button>
+            </div>
+          )}
+          {isMobile && (
+            <button
+              className={`icon-btn ${timelineExpanded ? 'active' : ''}`}
+              onClick={toggleTimelineExpanded}
+              title={timelineExpanded ? 'Collapse timeline' : 'Expand timeline'}
+              aria-label={timelineExpanded ? 'Collapse timeline' : 'Expand timeline'}
+            >
+              {timelineExpanded ? '▾' : '▴'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="track-headers" style={{ overflowY: 'hidden' }}>

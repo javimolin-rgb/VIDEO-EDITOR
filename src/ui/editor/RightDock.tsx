@@ -8,26 +8,39 @@ import { ClipInspector } from './inspector/ClipInspector';
 import { TransitionInspector } from './inspector/TransitionInspector';
 import { AppSettings } from './AppSettings';
 
-const TABS: { id: RightPanel; label: string }[] = [
-  { id: 'inspector', label: 'Inspector' },
-  { id: 'transcript', label: 'Transcript' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'settings', label: 'Settings' },
+const TABS: { id: RightPanel; label: string; icon: string }[] = [
+  { id: 'inspector', label: 'Inspector', icon: '⚙️' },
+  { id: 'transcript', label: 'Transcript', icon: '💬' },
+  { id: 'activity', label: 'Activity', icon: '🕑' },
+  { id: 'settings', label: 'Settings', icon: '☰' },
 ];
 
-export function RightDock() {
+export function RightDock({ asSheet = false, onClose }: { asSheet?: boolean; onClose?: () => void }) {
   const rightPanel = useUIStore((s) => s.rightPanel);
   const setRightPanel = useUIStore((s) => s.setRightPanel);
 
   return (
-    <div className="panel">
-      <div className="panel-tabs">
+    <div className={`panel${asSheet ? ' as-sheet' : ''}`}>
+      {asSheet && (
+        <div className="sheet-head">
+          <span className="grip" aria-hidden />
+          <h4>Properties</h4>
+          <span className="spacer" />
+          <button className="ghost" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+      )}
+      <div className="panel-tabs" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={rightPanel === t.id}
             className={rightPanel === t.id ? 'active' : ''}
             onClick={() => setRightPanel(t.id)}
           >
+            <span aria-hidden>{t.icon}</span>
             {t.label}
           </button>
         ))}

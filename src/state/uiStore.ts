@@ -8,6 +8,8 @@ import { create } from 'zustand';
 export type Workspace = 'edit' | 'studio' | 'ai-setup' | 'automation';
 export type LeftPanel = 'media' | 'generate' | 'effects' | 'audio' | 'text';
 export type RightPanel = 'inspector' | 'transcript' | 'activity' | 'settings';
+/** On phones the side docks open as a bottom sheet, one at a time. */
+export type MobileSheet = 'left' | 'right' | null;
 
 export interface Toast {
   id: string;
@@ -19,6 +21,11 @@ interface UIState {
   workspace: Workspace;
   leftPanel: LeftPanel;
   rightPanel: RightPanel;
+
+  /** Mobile: which dock is shown as a bottom sheet (null = none). */
+  mobileSheet: MobileSheet;
+  /** Mobile: timeline expanded to a taller working height. */
+  timelineExpanded: boolean;
 
   selectedClipIds: string[];
   selectedAssetId: string | null;
@@ -39,6 +46,10 @@ interface UIState {
   setWorkspace: (w: Workspace) => void;
   setLeftPanel: (p: LeftPanel) => void;
   setRightPanel: (p: RightPanel) => void;
+  setMobileSheet: (s: MobileSheet) => void;
+  openLeftPanel: (p: LeftPanel) => void;
+  openRightPanel: (p: RightPanel) => void;
+  toggleTimelineExpanded: () => void;
 
   selectClips: (ids: string[], additive?: boolean) => void;
   clearClipSelection: () => void;
@@ -68,6 +79,8 @@ export const useUIStore = create<UIState>((set) => ({
   workspace: 'edit',
   leftPanel: 'media',
   rightPanel: 'inspector',
+  mobileSheet: null,
+  timelineExpanded: false,
 
   selectedClipIds: [],
   selectedAssetId: null,
@@ -83,9 +96,13 @@ export const useUIStore = create<UIState>((set) => ({
   toasts: [],
   commandPaletteOpen: false,
 
-  setWorkspace: (workspace) => set({ workspace }),
+  setWorkspace: (workspace) => set({ workspace, mobileSheet: null }),
   setLeftPanel: (leftPanel) => set({ leftPanel }),
   setRightPanel: (rightPanel) => set({ rightPanel }),
+  setMobileSheet: (mobileSheet) => set({ mobileSheet }),
+  openLeftPanel: (leftPanel) => set({ leftPanel, mobileSheet: 'left' }),
+  openRightPanel: (rightPanel) => set({ rightPanel, mobileSheet: 'right' }),
+  toggleTimelineExpanded: () => set((s) => ({ timelineExpanded: !s.timelineExpanded })),
 
   selectClips: (ids, additive = false) =>
     set((s) => ({

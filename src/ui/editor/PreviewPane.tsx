@@ -120,18 +120,32 @@ export function PreviewPane() {
         )}
       </div>
 
+      <div className="scrubber">
+        <span className="tc mono">{formatTimecode(playhead, timeline.timebase)}</span>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(1, end)}
+          step={1}
+          value={Math.min(playhead, end)}
+          onChange={(e) => setPlayhead(Number(e.target.value))}
+          aria-label="Scrub"
+        />
+        <span className="muted mono" style={{ fontSize: 11 }}>
+          {formatClock(end, timeline.timebase)}
+        </span>
+      </div>
+
       <div className="transport">
-        <button className="ghost" onClick={() => setPlayhead(0)} title="Go to start">
+        <button className="skip" onClick={() => setPlayhead(0)} title="Go to start" aria-label="Go to start">
           ⏮
         </button>
-        <button className="primary" onClick={togglePlay} title="Play/Pause (Space)">
-          {isPlaying ? '⏸ Pause' : '▶ Play'}
+        <button className="play" onClick={togglePlay} title="Play / Pause (Space)" aria-label="Play or pause">
+          {isPlaying ? '⏸' : '▶'}
         </button>
-        <button className="ghost" onClick={() => setPlayhead(end)} title="Go to end">
+        <button className="skip" onClick={() => setPlayhead(end)} title="Go to end" aria-label="Go to end">
           ⏭
         </button>
-        <span className="tc mono">{formatTimecode(playhead, timeline.timebase)}</span>
-        <span className="muted">/ {formatClock(end, timeline.timebase)}</span>
       </div>
     </div>
   );
