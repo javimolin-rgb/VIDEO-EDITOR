@@ -10,6 +10,11 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Relative asset URLs so the same build works when served from a sub-path
+  // (GitHub Pages project site: /VIDEO-EDITOR/), from a domain root, from
+  // `vite preview`, and from the Tauri desktop shell — the app has no
+  // client-side router, so relative resolution is always correct.
+  base: './',
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
