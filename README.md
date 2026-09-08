@@ -1,4 +1,4 @@
-# AI Video Editor
+# ZURY
 
 A **local-first** professional video editor with an **extensible local generative-AI engine**.
 

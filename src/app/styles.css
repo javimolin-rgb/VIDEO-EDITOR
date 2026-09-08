@@ -135,6 +135,14 @@ body,
   margin: 0;
 }
 
+html {
+  /* iOS/Safari inflates text in tall blocks unless this is pinned — this was
+     the "textos enormes" on phones. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--bg-0);
   color: var(--text-0);
@@ -144,6 +152,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 ::-webkit-scrollbar {
@@ -430,15 +439,20 @@ textarea {
   flex-wrap: wrap;
 }
 .hero .mark {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
   background: var(--accent-grad);
   display: grid;
   place-items: center;
+  color: #fff;
   font-size: 22px;
   box-shadow: var(--shadow-2);
   flex-shrink: 0;
+}
+.hero .mark svg {
+  width: 66%;
+  height: 66%;
 }
 .browser h1 {
   font-size: clamp(20px, 4vw, 26px);
@@ -504,7 +518,13 @@ textarea {
   height: 100%;
   display: grid;
   grid-template-rows: var(--topbar-h) 1fr minmax(210px, 40%);
+  /* one full-width column — stops an auto column from growing to its content
+     (which made AI Studio overflow sideways on phones) */
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
+}
+.editor > * {
+  min-width: 0;
 }
 
 .topbar {
@@ -1094,6 +1114,36 @@ textarea {
   }
 }
 
+/* Horizontally scrollable chip strip — mode / view switchers on narrow screens */
+.chip-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.chip-strip::-webkit-scrollbar {
+  display: none;
+}
+.chip-strip > button {
+  flex: 0 0 auto;
+}
+.studio-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (max-width: 759px) {
+  .studio-head h2 {
+    width: 100%;
+  }
+  .studio-head .pill {
+    order: 3;
+  }
+}
+
 .studio-modes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -1337,20 +1387,32 @@ textarea {
 
 @media (max-width: 759px) {
   :root {
-    --topbar-h: 52px;
+    --topbar-h: 50px;
+    --bottomnav-h: 58px;
+    --pad: 12px;
   }
   body {
+    font-size: 14px;
+  }
+  h1 {
+    font-size: 21px;
+  }
+  h2 {
+    font-size: 17px;
+  }
+  h3 {
     font-size: 15px;
   }
+  h4 {
+    font-size: 13px;
+  }
 
-  /* the whole editor becomes: topbar / preview / timeline / bottom-nav.
-     The timeline row height is driven here (not on .timeline) so grid can't
-     clamp it. */
+  /* topbar / preview (hugs content) / timeline (fills the rest) / bottom-nav */
   .editor {
-    grid-template-rows: var(--topbar-h) minmax(0, 1fr) 40vh var(--bottomnav-h);
+    grid-template-rows: var(--topbar-h) auto minmax(160px, 1fr) var(--bottomnav-h);
   }
   .editor.timeline-open {
-    grid-template-rows: var(--topbar-h) minmax(120px, 1fr) min(62vh, 520px) var(--bottomnav-h);
+    grid-template-rows: var(--topbar-h) minmax(0, 26vh) 1fr var(--bottomnav-h);
   }
 
   .workarea {
@@ -1367,23 +1429,64 @@ textarea {
     height: 100%;
   }
 
+  /* non-edit workspaces (AI Studio / Automation / AI Setup) — one scrollable
+     column, never a sideways scrollbar. These panels carry an inline
+     `max-width` + `margin: 0 auto`; on a grid the `auto` margins make the item
+     size to its content and overflow, so pin it to the column here. */
+  .editor > .panel-body {
+    padding: 14px 14px calc(28px + env(safe-area-inset-bottom, 0));
+    margin: 0 !important;
+    width: 100%;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+  .panel-body {
+    overflow-x: hidden;
+  }
+  /* grid/flex children must be allowed to shrink below their content width,
+     otherwise long option text / mono blocks push the layout past the screen */
+  .studio-grid,
+  .studio-grid > *,
+  .col,
+  .col > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .rowfields {
+    grid-template-columns: 1fr;
+  }
+  .panel-body .mono,
+  .preview-frame .muted {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .panel-body input,
+  .panel-body select,
+  .panel-body textarea {
+    max-width: 100%;
+  }
+
   .topbar {
-    padding: 0 8px;
-    gap: 6px;
+    padding: 0 6px;
+    gap: 4px;
   }
   .topbar .title {
     max-width: none;
     flex: 1;
     min-width: 0;
+    font-size: 15px;
   }
   .topbar .save-state {
     display: none;
+  }
+  .topbar .primary {
+    padding: 0 14px;
   }
 
   .preview-pane {
     padding: 10px;
     justify-content: flex-start;
-    gap: 12px;
+    gap: 10px;
   }
   .preview-stage {
     flex: 0 1 auto;
@@ -1391,7 +1494,26 @@ textarea {
     padding-top: 2px;
   }
   .preview-pane .transport {
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+  }
+  .transport .play {
+    min-width: 52px;
+    min-height: 52px;
+    font-size: 18px;
+  }
+  .transport .skip {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .preview-empty {
+    padding: 16px;
+  }
+  .preview-empty strong {
+    font-size: 14px;
+  }
+  .preview-empty .muted {
+    font-size: 12px;
+    max-width: 260px !important;
   }
 
   /* timeline fills whatever row height .editor gave it */
@@ -1399,24 +1521,46 @@ textarea {
     height: 100%;
     min-height: 0;
     border-top: 1px solid var(--line);
-    grid-template-columns: 92px 1fr;
+    grid-template-columns: 84px 1fr;
   }
   .timeline-toolbar {
     padding: 6px;
+    gap: 3px;
   }
   .timeline-toolbar button {
-    min-height: 36px;
-    padding: 6px 10px;
+    min-height: 38px;
+    padding: 6px 9px;
+  }
+  .tbar-group + .tbar-group {
+    padding-left: 5px;
+  }
+  .track-header {
+    padding: 6px;
+  }
+  .track-header .name {
+    font-size: 11px;
   }
   .track-header .controls button {
     min-height: 26px;
     min-width: 26px;
+    font-size: 10px;
+  }
+  .clip {
+    top: 5px;
+    bottom: 5px;
   }
   .clip .handle {
-    width: 18px;
+    width: 20px;
   }
   .clip .handle::after {
     opacity: 1;
+  }
+  .field label {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+  .model-row {
+    grid-template-columns: 1fr;
   }
 
   /* bottom nav */
@@ -1432,18 +1576,18 @@ textarea {
   .bottom-nav button {
     flex: 1;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     background: transparent;
     border: none;
     border-radius: 0;
     color: var(--text-2);
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 600;
     min-height: var(--bottomnav-h);
     padding: 6px 2px;
   }
   .bottom-nav button .bn-icon {
-    font-size: 19px;
+    font-size: 18px;
     line-height: 1;
   }
   .bottom-nav button.active {
@@ -1476,6 +1620,9 @@ textarea {
   }
 
   /* project browser */
+  .browser {
+    padding: 24px 16px 48px;
+  }
   .hero-actions {
     width: 100%;
     margin-left: 0;
@@ -1484,17 +1631,14 @@ textarea {
     flex: 1;
   }
   .project-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 }
 
 @media (max-width: 400px) {
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
   .bottom-nav button {
-    font-size: 10px;
+    font-size: 9.5px;
   }
 }
 

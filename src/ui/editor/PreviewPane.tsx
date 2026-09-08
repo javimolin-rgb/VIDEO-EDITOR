@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useT } from '@/i18n';
 import { PreviewEngine } from '@/video/previewEngine';
 import { getMediaUrl } from '@/state/mediaUrls';
 import { formatTimecode, formatClock } from '@/lib/time';
@@ -16,6 +17,7 @@ export function PreviewPane() {
   const isPlaying = useUIStore((s) => s.isPlaying);
   const togglePlay = useUIStore((s) => s.togglePlay);
   const setWorkspace = useUIStore((s) => s.setWorkspace);
+  const t = useT();
 
   const timeline = project?.timeline;
   const playhead = timeline?.playheadFrame ?? 0;
@@ -108,13 +110,17 @@ export function PreviewPane() {
         {isEmpty && (
           <div className="preview-empty">
             <div style={{ fontSize: 26, marginBottom: 8 }}>🎬</div>
-            <strong>The timeline is empty</strong>
+            <strong>{t('preview.emptyTitle')}</strong>
             <div className="muted" style={{ maxWidth: 340, marginTop: 6 }}>
-              Import a video or image on the left and drag it onto a track, or generate a clip in{' '}
-              <button className="ghost" style={{ padding: '1px 6px' }} onClick={() => setWorkspace('studio')}>
-                AI Studio
+              {t('preview.emptyBody')}{' '}
+              <button
+                className="ghost"
+                style={{ padding: '1px 6px' }}
+                onClick={() => setWorkspace('studio')}
+              >
+                {t('studio.title')}
               </button>
-              . The preview shows whatever sits under the playhead.
+              {t('preview.emptyBodyEnd')}
             </div>
           </div>
         )}
@@ -137,13 +143,28 @@ export function PreviewPane() {
       </div>
 
       <div className="transport">
-        <button className="skip" onClick={() => setPlayhead(0)} title="Go to start" aria-label="Go to start">
+        <button
+          className="skip"
+          onClick={() => setPlayhead(0)}
+          title={t('preview.toStart')}
+          aria-label={t('preview.toStart')}
+        >
           ⏮
         </button>
-        <button className="play" onClick={togglePlay} title="Play / Pause (Space)" aria-label="Play or pause">
+        <button
+          className="play"
+          onClick={togglePlay}
+          title={t('preview.playPause')}
+          aria-label={t('preview.playPause')}
+        >
           {isPlaying ? '⏸' : '▶'}
         </button>
-        <button className="skip" onClick={() => setPlayhead(end)} title="Go to end" aria-label="Go to end">
+        <button
+          className="skip"
+          onClick={() => setPlayhead(end)}
+          title={t('preview.toEnd')}
+          aria-label={t('preview.toEnd')}
+        >
           ⏭
         </button>
       </div>

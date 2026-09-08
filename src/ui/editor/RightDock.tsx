@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore, type RightPanel } from '@/state/uiStore';
+import { useT, type MessageKey } from '@/i18n';
 import { getClip } from '@/domain/timeline/operations';
 import type { AspectRatioId, ProjectVersion } from '@/domain/types';
 import { ASPECT_PRESETS } from '@/domain/project';
@@ -8,14 +9,15 @@ import { ClipInspector } from './inspector/ClipInspector';
 import { TransitionInspector } from './inspector/TransitionInspector';
 import { AppSettings } from './AppSettings';
 
-const TABS: { id: RightPanel; label: string; icon: string }[] = [
-  { id: 'inspector', label: 'Inspector', icon: '⚙️' },
-  { id: 'transcript', label: 'Transcript', icon: '💬' },
-  { id: 'activity', label: 'Activity', icon: '🕑' },
-  { id: 'settings', label: 'Settings', icon: '☰' },
+const TABS: { id: RightPanel; key: MessageKey; icon: string }[] = [
+  { id: 'inspector', key: 'dock.inspector', icon: '⚙️' },
+  { id: 'transcript', key: 'dock.transcript', icon: '💬' },
+  { id: 'activity', key: 'dock.activity', icon: '🕑' },
+  { id: 'settings', key: 'dock.settings', icon: '☰' },
 ];
 
 export function RightDock({ asSheet = false, onClose }: { asSheet?: boolean; onClose?: () => void }) {
+  const t = useT();
   const rightPanel = useUIStore((s) => s.rightPanel);
   const setRightPanel = useUIStore((s) => s.setRightPanel);
 
@@ -24,24 +26,24 @@ export function RightDock({ asSheet = false, onClose }: { asSheet?: boolean; onC
       {asSheet && (
         <div className="sheet-head">
           <span className="grip" aria-hidden />
-          <h4>Properties</h4>
+          <h4>{t('nav.properties')}</h4>
           <span className="spacer" />
-          <button className="ghost" onClick={onClose} aria-label="Close">
+          <button className="ghost" onClick={onClose} aria-label={t('common.close')}>
             ✕
           </button>
         </div>
       )}
       <div className="panel-tabs" role="tablist">
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <button
-            key={t.id}
+            key={tab.id}
             role="tab"
-            aria-selected={rightPanel === t.id}
-            className={rightPanel === t.id ? 'active' : ''}
-            onClick={() => setRightPanel(t.id)}
+            aria-selected={rightPanel === tab.id}
+            className={rightPanel === tab.id ? 'active' : ''}
+            onClick={() => setRightPanel(tab.id)}
           >
-            <span aria-hidden>{t.icon}</span>
-            {t.label}
+            <span aria-hidden>{tab.icon}</span>
+            {t(tab.key)}
           </button>
         ))}
       </div>

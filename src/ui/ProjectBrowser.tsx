@@ -3,6 +3,7 @@ import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import { useGenStore } from '@/state/genStore';
 import { useT } from '@/i18n';
+import { Logo } from '@/ui/Logo';
 import { listProjects, deleteProject, duplicateProject } from '@/storage/repository';
 import type { ProjectRow } from '@/storage/db';
 import type { AspectRatioId } from '@/domain/types';
@@ -36,19 +37,19 @@ export function ProjectBrowser() {
     await createSampleProject();
     setStudioView('storyboard');
     setWorkspace('studio');
-    pushToast('info', 'Generating the sample clips locally — this takes a few seconds.');
+    pushToast('info', t('browser.sampleToast'));
     const gen = useGenStore.getState();
     await gen.generateAllShots();
     await gen.awaitStoryboardSettled();
     gen.assembleStoryboard();
-    pushToast('success', 'Sample ready — switch to Edit to see the timeline.');
+    pushToast('success', t('browser.sampleReady'));
   };
 
   return (
     <div className="browser">
       <div className="hero">
         <div className="mark" aria-hidden>
-          🎬
+          <Logo />
         </div>
         <div>
           <h1>{t('app.title')}</h1>
@@ -77,28 +78,30 @@ export function ProjectBrowser() {
               <span className="chip">{row.data.settings.fps} fps</span>
               <span className="chip">{row.data.timeline.clips.length} clips</span>
             </div>
-            <div className="meta">updated {new Date(row.updatedAt).toLocaleString()}</div>
+            <div className="meta">
+              {t('browser.updated', { when: new Date(row.updatedAt).toLocaleString() })}
+            </div>
             <div className="card-actions" onClick={(e) => e.stopPropagation()}>
               <button
                 className="ghost"
                 onClick={() => {
                   void duplicateProject(row.id, `${row.name} copy`).then(() => {
                     refresh();
-                    pushToast('success', 'Project duplicated');
+                    pushToast('success', t('browser.duplicate'));
                   });
                 }}
               >
-                Duplicate
+                {t('browser.duplicate')}
               </button>
               <button
                 className="ghost danger"
                 onClick={() => {
-                  if (confirm(`Delete “${row.name}”? This removes its media and versions.`)) {
+                  if (confirm(`${t('browser.delete')} “${row.name}”?`)) {
                     void deleteProject(row.id).then(refresh);
                   }
                 }}
               >
-                Delete
+                {t('browser.delete')}
               </button>
             </div>
           </div>
@@ -108,13 +111,13 @@ export function ProjectBrowser() {
       {creating && (
         <div className="modal-backdrop" onClick={() => setCreating(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>New project</h2>
+            <h2>{t('browser.newProjectTitle')}</h2>
             <div className="field">
-              <label>Name</label>
+              <label>{t('browser.name')}</label>
               <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             </div>
             <div className="field">
-              <label>Aspect ratio</label>
+              <label>{t('browser.aspectRatio')}</label>
               <select value={aspect} onChange={(e) => setAspect(e.target.value as AspectRatioId)}>
                 {ASPECTS.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -124,7 +127,7 @@ export function ProjectBrowser() {
               </select>
             </div>
             <div className="field">
-              <label>Frame rate</label>
+              <label>{t('browser.frameRate')}</label>
               <select value={fps} onChange={(e) => setFps(Number(e.target.value))}>
                 {[24, 25, 30, 50, 60].map((f) => (
                   <option key={f} value={f}>
@@ -134,14 +137,14 @@ export function ProjectBrowser() {
               </select>
             </div>
             <div className="actions">
-              <button onClick={() => setCreating(false)}>Cancel</button>
+              <button onClick={() => setCreating(false)}>{t('browser.cancel')}</button>
               <button
                 className="primary"
                 onClick={() => {
                   void newProject({ name, aspectRatio: aspect, fps }).then(() => setCreating(false));
                 }}
               >
-                Create
+                {t('browser.create')}
               </button>
             </div>
           </div>

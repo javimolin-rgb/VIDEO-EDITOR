@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import { useLayoutMode } from '@/ui/hooks/useMediaQuery';
+import { useT } from '@/i18n';
 import { clipTimelineRange, type Clip, type TransitionType } from '@/domain/types';
 import { contentEndFrame } from '@/domain/timeline/operations';
 import { formatClock } from '@/lib/time';
@@ -43,6 +44,7 @@ export function Timeline() {
   const timelineExpanded = useUIStore((s) => s.timelineExpanded);
   const toggleTimelineExpanded = useUIStore((s) => s.toggleTimelineExpanded);
 
+  const t = useT();
   const mode = useLayoutMode();
   const isMobile = mode === 'mobile';
   const lanesRef = useRef<HTMLDivElement>(null);
@@ -91,10 +93,10 @@ export function Timeline() {
       const threshold = 8 / pxPerFrame;
       let best = Math.round(frame);
       let bestDist = threshold;
-      for (const t of targets) {
-        const d = Math.abs(t - frame);
+      for (const target of targets) {
+        const d = Math.abs(target - frame);
         if (d < bestDist) {
-          best = t;
+          best = target;
           bestDist = d;
         }
       }
@@ -166,7 +168,7 @@ export function Timeline() {
     <div className="timeline">
       <div className="timeline-toolbar">
         <div className="tbar-group">
-          <button className="icon-btn" onClick={zoomOut} title="Zoom out (-)" aria-label="Zoom out">
+          <button className="icon-btn" onClick={zoomOut} title={t('tl.zoomOut')} aria-label={t('tl.zoomOut')}>
             −
           </button>
           {!isMobile && (
@@ -178,20 +180,20 @@ export function Timeline() {
               step={0.01}
               value={pxPerFrame}
               onChange={(e) => setZoom(Number(e.target.value))}
-              aria-label="Timeline zoom"
+              aria-label={t('tl.zoomIn')}
             />
           )}
-          <button className="icon-btn" onClick={zoomIn} title="Zoom in (+)" aria-label="Zoom in">
+          <button className="icon-btn" onClick={zoomIn} title={t('tl.zoomIn')} aria-label={t('tl.zoomIn')}>
             +
           </button>
           <button
             className={snapEnabled ? 'active' : ''}
             onClick={toggleSnap}
-            title="Toggle snapping"
+            title={t('tl.snap')}
             aria-pressed={snapEnabled}
             style={{ padding: '5px 10px' }}
           >
-            Snap
+            {t('tl.snap')}
           </button>
         </div>
 
@@ -199,8 +201,8 @@ export function Timeline() {
           <button
             className="icon-btn"
             onClick={() => splitAtPlayhead(selectedClipIds)}
-            title="Split at playhead (S)"
-            aria-label="Split"
+            title={t('tl.split')}
+            aria-label={t('tl.split')}
           >
             ✂
           </button>
@@ -208,8 +210,8 @@ export function Timeline() {
             className="icon-btn"
             disabled={selectedClipIds.length !== 1}
             onClick={() => selectedClipIds[0] && duplicateClip(selectedClipIds[0])}
-            title="Duplicate clip"
-            aria-label="Duplicate clip"
+            title={t('tl.duplicate')}
+            aria-label={t('tl.duplicate')}
           >
             ⧉
           </button>
@@ -217,8 +219,8 @@ export function Timeline() {
             className="icon-btn danger"
             disabled={selectedClipIds.length !== 1}
             onClick={() => selectedClipIds[0] && rippleDelete(selectedClipIds[0])}
-            title="Delete clip and close the gap"
-            aria-label="Ripple delete"
+            title={t('tl.rippleDelete')}
+            aria-label={t('tl.rippleDelete')}
           >
             🗑
           </button>
@@ -230,7 +232,7 @@ export function Timeline() {
           <button
             className={`icon-btn ${moreOpen ? 'active' : ''}`}
             onClick={() => setMoreOpen((v) => !v)}
-            aria-label="More timeline actions"
+            aria-label={t('tl.more')}
             aria-expanded={moreOpen}
           >
             ⋯
@@ -243,7 +245,7 @@ export function Timeline() {
                   setMoreOpen(false);
                 }}
               >
-                ⚑ Add marker (M)
+                ⚑ {t('tl.addMarker')}
               </button>
               <button
                 disabled={selectedClipIds.length !== 1 || localJob?.kind === 'shots'}
@@ -254,11 +256,11 @@ export function Timeline() {
                   const n = await detectShotsForClip(id, 0.45);
                   pushToast(
                     n > 0 ? 'success' : 'info',
-                    n > 0 ? `Added ${n} shot markers.` : 'No cuts detected.',
+                    n > 0 ? t('tl.shotsAdded', { n }) : t('tl.noShots'),
                   );
                 }}
               >
-                {localJob?.kind === 'shots' ? '⏳ Analysing…' : '◫ Detect shots'}
+                {localJob?.kind === 'shots' ? `⏳ ${t('tl.analysing')}` : `◫ ${t('tl.detectShots')}`}
               </button>
               <button
                 disabled={!selectedPair}
@@ -274,7 +276,7 @@ export function Timeline() {
                   setMoreOpen(false);
                 }}
               >
-                ⇄ Add transition
+                ⇄ {t('tl.addTransition')}
               </button>
               <div className="sep" />
               <button
@@ -283,7 +285,7 @@ export function Timeline() {
                   setMoreOpen(false);
                 }}
               >
-                ＋ Video track
+                ＋ {t('tl.videoTrack')}
               </button>
               <button
                 onClick={() => {
@@ -291,7 +293,7 @@ export function Timeline() {
                   setMoreOpen(false);
                 }}
               >
-                ＋ Audio track
+                ＋ {t('tl.audioTrack')}
               </button>
               <button
                 onClick={() => {
@@ -299,7 +301,7 @@ export function Timeline() {
                   setMoreOpen(false);
                 }}
               >
-                ＋ Adjustment layer
+                ＋ {t('tl.adjustmentLayer')}
               </button>
             </div>
           )}
@@ -307,8 +309,8 @@ export function Timeline() {
             <button
               className={`icon-btn ${timelineExpanded ? 'active' : ''}`}
               onClick={toggleTimelineExpanded}
-              title={timelineExpanded ? 'Collapse timeline' : 'Expand timeline'}
-              aria-label={timelineExpanded ? 'Collapse timeline' : 'Expand timeline'}
+              title={timelineExpanded ? t('tl.collapse') : t('tl.expand')}
+              aria-label={timelineExpanded ? t('tl.collapse') : t('tl.expand')}
             >
               {timelineExpanded ? '▾' : '▴'}
             </button>
@@ -318,45 +320,45 @@ export function Timeline() {
 
       <div className="track-headers" style={{ overflowY: 'hidden' }}>
         <div style={{ height: 22 }} />
-        {timeline.tracks.map((t) => (
+        {timeline.tracks.map((track) => (
           <div
-            key={t.id}
+            key={track.id}
             className="track-header"
             style={{
-              height: t.height,
-              background: activeTrackId === t.id ? 'var(--bg-3)' : undefined,
+              height: track.height,
+              background: activeTrackId === track.id ? 'var(--bg-3)' : undefined,
             }}
-            onClick={() => setActiveTrack(t.id)}
+            onClick={() => setActiveTrack(track.id)}
           >
-            <span className="name">{t.name}</span>
+            <span className="name">{track.name}</span>
             <div className="controls">
               <button
-                className={t.muted ? 'primary' : ''}
+                className={track.muted ? 'primary' : ''}
                 onClick={(e) => {
                   e.stopPropagation();
-                  updateTrack(t.id, { muted: !t.muted });
+                  updateTrack(track.id, { muted: !track.muted });
                 }}
-                title="Mute"
+                title={t('tl.mute')}
               >
                 M
               </button>
               <button
-                className={t.hidden ? 'primary' : ''}
+                className={track.hidden ? 'primary' : ''}
                 onClick={(e) => {
                   e.stopPropagation();
-                  updateTrack(t.id, { hidden: !t.hidden });
+                  updateTrack(track.id, { hidden: !track.hidden });
                 }}
-                title="Hide"
+                title={t('tl.hide')}
               >
                 H
               </button>
               <button
-                className={t.locked ? 'primary' : ''}
+                className={track.locked ? 'primary' : ''}
                 onClick={(e) => {
                   e.stopPropagation();
-                  updateTrack(t.id, { locked: !t.locked });
+                  updateTrack(track.id, { locked: !track.locked });
                 }}
-                title="Lock"
+                title={t('tl.lock')}
               >
                 L
               </button>

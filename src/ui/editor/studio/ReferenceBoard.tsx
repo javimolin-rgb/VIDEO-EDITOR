@@ -1,4 +1,5 @@
 import { useProjectStore } from '@/state/projectStore';
+import { useT } from '@/i18n';
 import type { ReferencePriority, ReferenceRole } from '@/domain/types';
 
 const ROLES: ReferenceRole[] = [
@@ -18,6 +19,7 @@ const PRIORITIES: ReferencePriority[] = ['critical', 'high', 'medium', 'low'];
 
 /** Reference board (spec §23, §24, §135) — each reference carries a role + priority. */
 export function ReferenceBoard() {
+  const t = useT();
   const project = useProjectStore((s) => s.project);
   const assets = useProjectStore((s) => s.assets);
   const addReference = useProjectStore((s) => s.addReference);
@@ -31,12 +33,11 @@ export function ReferenceBoard() {
 
   return (
     <div>
-      <h4 style={{ margin: '4px 0 8px' }}>References</h4>
+      <h4 style={{ margin: '4px 0 8px' }}>{t('form.references')}</h4>
 
       {refs.length === 0 && (
         <div className="muted" style={{ fontSize: 11, marginBottom: 8 }}>
-          Add images/clips and tell the model what each one is for. The generator weights them by
-          role and priority.
+          {t('form.referencesHint')}
         </div>
       )}
 

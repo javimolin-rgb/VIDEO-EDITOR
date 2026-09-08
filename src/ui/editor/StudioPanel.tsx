@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGenStore } from '@/state/genStore';
 import { useProjectStore } from '@/state/projectStore';
 import { getMediaUrl } from '@/state/mediaUrls';
+import { useT, type MessageKey } from '@/i18n';
 import { route, type GenerativeTask } from '@/ai/orchestrator';
 import { PromptForm } from './studio/PromptForm';
 import { ReferenceBoard } from './studio/ReferenceBoard';
@@ -10,13 +11,13 @@ import { StoryboardView } from './studio/StoryboardView';
 import { DirectorView } from './studio/DirectorView';
 import type { GenKind } from '@/ai/gen/queue';
 
-const MODES: Array<{ id: string; label: string; task: GenerativeTask; kind?: GenKind }> = [
-  { id: 't2v', label: 'Text → Video', task: 'text-to-video', kind: 'text-to-video' },
-  { id: 'i2v', label: 'Image → Video', task: 'image-to-video', kind: 'image-to-video' },
-  { id: 'ref', label: 'Reference → Video', task: 'reference-to-video' },
-  { id: 'v2v', label: 'Video → Video', task: 'video-to-video' },
-  { id: 'extend', label: 'Extend Video', task: 'extend-video' },
-  { id: 'region', label: 'Region Edit', task: 'region-edit' },
+const MODES: Array<{ id: string; key: MessageKey; task: GenerativeTask; kind?: GenKind }> = [
+  { id: 't2v', key: 'mode.t2v', task: 'text-to-video', kind: 'text-to-video' },
+  { id: 'i2v', key: 'mode.i2v', task: 'image-to-video', kind: 'image-to-video' },
+  { id: 'ref', key: 'mode.ref', task: 'reference-to-video' },
+  { id: 'v2v', key: 'mode.v2v', task: 'video-to-video' },
+  { id: 'extend', key: 'mode.extend', task: 'extend-video' },
+  { id: 'region', key: 'mode.region', task: 'region-edit' },
 ];
 
 /**
@@ -26,6 +27,7 @@ const MODES: Array<{ id: string; label: string; task: GenerativeTask; kind?: Gen
  * state — never a fake result (spec §159, §160).
  */
 export function StudioPanel() {
+  const t = useT();
   const project = useProjectStore((s) => s.project);
   const assets = useProjectStore((s) => s.assets);
   const mode = useGenStore((s) => s.mode);
@@ -58,33 +60,33 @@ export function StudioPanel() {
 
   return (
     <div className="panel-body" style={{ maxWidth: 1180, margin: '0 auto' }}>
-      <div className="row">
-        <h2>AI Video Studio</h2>
-        <div className="row" style={{ gap: 4, marginLeft: 16 }}>
+      <div className="studio-head">
+        <h2>{t('studio.title')}</h2>
+        <div className="chip-strip">
           <button
             className={studioView === 'generate' ? 'primary' : ''}
             onClick={() => setStudioView('generate')}
           >
-            Generate
+            {t('studio.generate')}
           </button>
           <button
             className={studioView === 'storyboard' ? 'primary' : ''}
             onClick={() => setStudioView('storyboard')}
           >
-            Storyboard
+            {t('studio.storyboard')}
           </button>
           <button
             className={studioView === 'director' ? 'primary' : ''}
             onClick={() => setStudioView('director')}
           >
-            Director
+            {t('studio.director')}
           </button>
         </div>
         <span className="spacer" />
         <span className="pill good">
           {route('text-to-video').provider?.id === 'comfyui'
-            ? 'ComfyUI backend · local diffusion'
-            : 'Procedural generator · local · no model'}
+            ? t('studio.backendComfy')
+            : t('studio.backendProcedural')}
         </span>
       </div>
 
@@ -102,7 +104,7 @@ export function StudioPanel() {
 
       {studioView === 'generate' && (
       <>
-      <div className="row" style={{ gap: 6, margin: '12px 0', flexWrap: 'wrap' }}>
+      <div className="chip-strip" style={{ margin: '12px 0' }}>
         {MODES.map((m) => {
           const r = route(m.task);
           const enabled = !!r.provider && !!m.kind;
@@ -112,10 +114,10 @@ export function StudioPanel() {
               key={m.id}
               className={activeMode ? 'primary' : ''}
               disabled={!enabled}
-              title={enabled ? r.reason : 'No local backend for this yet (Phase 5).'}
+              title={enabled ? r.reason : t('studio.noBackend')}
               onClick={() => m.kind && setMode(m.kind)}
             >
-              {m.label}
+              {t(m.key)}
             </button>
           );
         })}
@@ -149,8 +151,7 @@ export function StudioPanel() {
                   textAlign: 'center',
                 }}
               >
-                Your generated clip will appear here. It becomes a normal asset — trim, colour,
-                add effects, drop it on the timeline.
+                {t('studio.resultHint')}
               </div>
             )}
           </div>

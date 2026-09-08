@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
+import { useT } from '@/i18n';
 import type { Asset } from '@/domain/types';
 
 const KIND_ICON: Record<Asset['kind'], string> = {
@@ -30,6 +31,7 @@ export function MediaPanel() {
   const setMobileSheet = useUIStore((s) => s.setMobileSheet);
   const activeTrackId = useUIStore((s) => s.activeTrackId);
   const pushToast = useUIStore((s) => s.pushToast);
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
@@ -43,11 +45,11 @@ export function MediaPanel() {
       tracks.find((tr) => tr.kind === wantKind) ??
       tracks[0];
     if (!target) {
-      pushToast('info', 'Add a track first.');
+      pushToast('info', t('media.needTrack'));
       return;
     }
     addClipFromAsset(asset.id, target.id, project.timeline.playheadFrame);
-    pushToast('success', `Added “${asset.name}” to ${target.name}.`);
+    pushToast('success', t('media.added', { name: asset.name, track: target.name }));
     setMobileSheet(null);
   };
 
@@ -70,9 +72,9 @@ export function MediaPanel() {
         <div className="dz-icon" aria-hidden>
           ＋
         </div>
-        <strong>Add media</strong>
+        <strong>{t('media.add')}</strong>
         <div className="muted" style={{ marginTop: 4, fontSize: 11.5 }}>
-          Tap to browse, or drop video · audio · images · SRT/VTT
+          {t('media.addHint')}
         </div>
       </div>
       <input
@@ -89,7 +91,7 @@ export function MediaPanel() {
 
       {importProgress && (
         <div className="notice info" style={{ marginTop: 10 }}>
-          Importing {importProgress.done + 1}/{importProgress.total}
+          {t('media.importing', { done: importProgress.done + 1, total: importProgress.total })}
           {importProgress.currentName ? ` — ${importProgress.currentName}` : ''}
         </div>
       )}
@@ -97,7 +99,7 @@ export function MediaPanel() {
       <div className="asset-list">
         {assets.length === 0 && !importProgress && (
           <div className="muted" style={{ marginTop: 8 }}>
-            No media yet.
+            {t('media.empty')}
           </div>
         )}
         {assets.map((a) => (
@@ -141,8 +143,8 @@ export function MediaPanel() {
             {a.kind !== 'caption' && (
               <button
                 className="add-btn"
-                title="Add to timeline at the playhead"
-                aria-label={`Add ${a.name} to timeline`}
+                title={t('media.addToTimeline')}
+                aria-label={t('media.addToTimeline')}
                 onClick={() => quickAdd(a)}
               >
                 ＋
@@ -150,10 +152,10 @@ export function MediaPanel() {
             )}
             <button
               className="ghost danger icon-btn"
-              title="Remove"
-              aria-label={`Remove ${a.name}`}
+              title={t('common.remove')}
+              aria-label={t('common.remove')}
               onClick={() => {
-                if (confirm(`Remove "${a.name}" and any clips using it?`)) void removeAsset(a.id);
+                if (confirm(t('media.remove', { name: a.name }))) void removeAsset(a.id);
               }}
             >
               ✕
@@ -163,8 +165,7 @@ export function MediaPanel() {
       </div>
 
       <div className="muted" style={{ marginTop: 12, fontSize: 11 }}>
-        <strong>＋</strong> adds a clip at the playhead. On desktop you can also drag a thumbnail
-        straight onto a track.
+        {t('media.dragHint')}
       </div>
     </div>
   );

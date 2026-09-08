@@ -32,8 +32,27 @@ interface Persisted {
   reducedMotion: boolean | 'system';
 }
 
+/** Match the browser's preferred language to one we ship; default English. */
+function detectLanguage(): LanguageId {
+  try {
+    const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+    for (const l of langs) {
+      if (l?.toLowerCase().startsWith('es')) return 'es';
+      if (l?.toLowerCase().startsWith('en')) return 'en';
+    }
+  } catch {
+    /* no navigator */
+  }
+  return 'en';
+}
+
 function load(): Persisted {
-  const fallback: Persisted = { theme: 'dark', uiScale: 1, language: 'en', reducedMotion: 'system' };
+  const fallback: Persisted = {
+    theme: 'dark',
+    uiScale: 1,
+    language: detectLanguage(),
+    reducedMotion: 'system',
+  };
   try {
     return { ...fallback, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Persisted>) };
   } catch {

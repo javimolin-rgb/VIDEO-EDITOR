@@ -18,9 +18,10 @@ describe('translate', () => {
   });
 
   it('interpolates {vars}', () => {
-    // No message uses vars yet; verify the mechanism on a synthetic pattern.
-    const out = translate('en', 'app.title').replace('Editor', '{x}');
-    expect(out.includes('{x}')).toBe(true);
+    expect(translate('en', 'form.duration', { n: 8 })).toBe('Duration — 8s');
+    expect(translate('es', 'browser.updated', { when: 'now' })).toBe('actualizado now');
+    // An unfilled placeholder is left visible rather than crashing.
+    expect(translate('en', 'form.duration')).toContain('{n}');
   });
 
   it('returns the key itself for an unknown key', () => {

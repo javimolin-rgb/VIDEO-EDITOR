@@ -1,18 +1,20 @@
 import { useUIStore, type LeftPanel } from '@/state/uiStore';
+import { useT, type MessageKey } from '@/i18n';
 import { MediaPanel } from './MediaPanel';
 import { EffectsPanel } from './panels/EffectsPanel';
 import { AudioPanel } from './panels/AudioPanel';
 import { TextPanel } from './panels/TextPanel';
 
-const TABS: { id: LeftPanel; label: string; icon: string }[] = [
-  { id: 'media', label: 'Media', icon: '🎬' },
-  { id: 'generate', label: 'AI', icon: '✦' },
-  { id: 'effects', label: 'Effects', icon: '✨' },
-  { id: 'audio', label: 'Audio', icon: '🎵' },
-  { id: 'text', label: 'Text', icon: 'T' },
+const TABS: { id: LeftPanel; key: MessageKey; icon: string }[] = [
+  { id: 'media', key: 'dock.media', icon: '🎬' },
+  { id: 'generate', key: 'dock.ai', icon: '✦' },
+  { id: 'effects', key: 'dock.effects', icon: '✨' },
+  { id: 'audio', key: 'dock.audio', icon: '🎵' },
+  { id: 'text', key: 'dock.text', icon: 'T' },
 ];
 
 export function LeftDock({ asSheet = false, onClose }: { asSheet?: boolean; onClose?: () => void }) {
+  const t = useT();
   const leftPanel = useUIStore((s) => s.leftPanel);
   const setLeftPanel = useUIStore((s) => s.setLeftPanel);
   const setWorkspace = useUIStore((s) => s.setWorkspace);
@@ -22,24 +24,24 @@ export function LeftDock({ asSheet = false, onClose }: { asSheet?: boolean; onCl
       {asSheet && (
         <div className="sheet-head">
           <span className="grip" aria-hidden />
-          <h4>Library</h4>
+          <h4>{t('nav.library')}</h4>
           <span className="spacer" />
-          <button className="ghost" onClick={onClose} aria-label="Close">
+          <button className="ghost" onClick={onClose} aria-label={t('common.close')}>
             ✕
           </button>
         </div>
       )}
       <div className="panel-tabs" role="tablist">
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <button
-            key={t.id}
+            key={tab.id}
             role="tab"
-            aria-selected={leftPanel === t.id}
-            className={leftPanel === t.id ? 'active' : ''}
-            onClick={() => setLeftPanel(t.id)}
+            aria-selected={leftPanel === tab.id}
+            className={leftPanel === tab.id ? 'active' : ''}
+            onClick={() => setLeftPanel(tab.id)}
           >
-            <span aria-hidden>{t.icon}</span>
-            {t.label}
+            <span aria-hidden>{tab.icon}</span>
+            {t(tab.key)}
           </button>
         ))}
       </div>
@@ -50,11 +52,10 @@ export function LeftDock({ asSheet = false, onClose }: { asSheet?: boolean; onCl
         {leftPanel === 'text' && <TextPanel />}
         {leftPanel === 'generate' && (
           <div className="notice info">
-            The generative tools live in <strong>AI Studio</strong> — text-to-video, storyboards and
-            the AI Director.
+            {t('studio.resultHint')}
             <div style={{ marginTop: 10 }}>
               <button className="primary" onClick={() => setWorkspace('studio')}>
-                Open AI Studio
+                {t('studio.title')}
               </button>
             </div>
           </div>

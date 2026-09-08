@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGenStore } from '@/state/genStore';
 import { useProjectStore } from '@/state/projectStore';
+import { useT } from '@/i18n';
 import { composePrompt, type CameraMove, type MotionLevel, type StyleId } from '@/ai/gen/prompt';
 
 const CAMERAS: CameraMove[] = [
@@ -43,6 +44,7 @@ export function PromptForm() {
   const generate = useGenStore((s) => s.generate);
   const jobs = useGenStore((s) => s.jobs);
   const [advanced, setAdvanced] = useState(false);
+  const t = useT();
 
   if (!project) return null;
   const running = jobs.some((j) => !['ready', 'failed', 'cancelled'].includes(j.status.phase));
@@ -52,12 +54,12 @@ export function PromptForm() {
     <div>
       {mode === 'image-to-video' && (
         <div className="field">
-          <label>First frame</label>
+          <label>{t('form.firstFrame')}</label>
           <select
             value={draft.firstFrameAssetId ?? ''}
             onChange={(e) => setFirstFrame(e.target.value || null)}
           >
-            <option value="">Pick an image / clip…</option>
+            <option value="">{t('form.pickImage')}</option>
             {images.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -68,10 +70,10 @@ export function PromptForm() {
       )}
 
       <div className="field">
-        <label>Prompt</label>
+        <label>{t('form.prompt')}</label>
         <textarea
           rows={3}
-          placeholder="e.g. model walking on a Mediterranean rooftop at golden hour, slow dolly in, wind in the fabric"
+          placeholder={t('form.promptPlaceholder')}
           value={draft.raw}
           onChange={(e) => setRaw(e.target.value)}
         />
@@ -79,7 +81,7 @@ export function PromptForm() {
 
       <div className="rowfields">
         <div className="field">
-          <label>Style</label>
+          <label>{t('form.style')}</label>
           <select
             value={draft.structured.style}
             onChange={(e) => patch({ style: e.target.value as StyleId })}
@@ -92,7 +94,7 @@ export function PromptForm() {
           </select>
         </div>
         <div className="field">
-          <label>Camera</label>
+          <label>{t('form.camera')}</label>
           <select
             value={draft.structured.camera}
             onChange={(e) => patch({ camera: e.target.value as CameraMove })}
@@ -108,7 +110,7 @@ export function PromptForm() {
 
       <div className="rowfields">
         <div className="field">
-          <label>Motion</label>
+          <label>{t('form.motion')}</label>
           <select
             value={draft.structured.motion}
             onChange={(e) => patch({ motion: e.target.value as MotionLevel })}
@@ -121,7 +123,7 @@ export function PromptForm() {
           </select>
         </div>
         <div className="field">
-          <label>Duration — {draft.durationSec}s</label>
+          <label>{t('form.duration', { n: draft.durationSec })}</label>
           <input
             type="range"
             min={1}
@@ -140,27 +142,27 @@ export function PromptForm() {
           checked={advanced}
           onChange={(e) => setAdvanced(e.target.checked)}
         />
-        Advanced
+        {t('form.advanced')}
       </label>
 
       {advanced && (
         <div className="model-row" style={{ display: 'block', padding: 10 }}>
           <div className="field">
-            <label>Colour mood</label>
+            <label>{t('form.colorMood')}</label>
             <input
               value={draft.structured.colorMood}
               onChange={(e) => patch({ colorMood: e.target.value })}
             />
           </div>
           <div className="field">
-            <label>Lighting</label>
+            <label>{t('form.lighting')}</label>
             <input
               value={draft.structured.lighting}
               onChange={(e) => patch({ lighting: e.target.value })}
             />
           </div>
           <div className="field">
-            <label>Constraints (comma separated)</label>
+            <label>{t('form.constraints')}</label>
             <input
               value={draft.structured.constraints.join(', ')}
               onChange={(e) =>
@@ -175,11 +177,11 @@ export function PromptForm() {
           </div>
           <div className="row" style={{ gap: 6 }}>
             <div className="field" style={{ flex: 1 }}>
-              <label>Seed</label>
+              <label>{t('form.seed')}</label>
               <input
                 type="number"
                 value={draft.seed ?? ''}
-                placeholder="random"
+                placeholder={t('form.random')}
                 onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : null)}
               />
             </div>
@@ -187,13 +189,13 @@ export function PromptForm() {
               className={draft.seedLocked ? 'primary' : ''}
               style={{ alignSelf: 'flex-end', marginBottom: 10 }}
               onClick={toggleSeedLock}
-              title="Lock the seed for reproducible output"
+              title={t('form.lock')}
             >
-              {draft.seedLocked ? 'Locked' : 'Lock'}
+              {draft.seedLocked ? t('form.locked') : t('form.lock')}
             </button>
           </div>
           <div className="field">
-            <label>Render quality — {(draft.quality * 100).toFixed(0)}%</label>
+            <label>{t('form.renderQuality', { n: (draft.quality * 100).toFixed(0) })}</label>
             <input
               type="range"
               min={0.2}
@@ -207,7 +209,7 @@ export function PromptForm() {
       )}
 
       <div className="field">
-        <label>Model-facing prompt</label>
+        <label>{t('form.modelPrompt')}</label>
         <div className="muted mono" style={{ fontSize: 11, lineHeight: 1.5 }}>
           {composePrompt(draft.structured)}
         </div>
@@ -219,7 +221,11 @@ export function PromptForm() {
         disabled={running || !draft.raw.trim()}
         onClick={() => void generate()}
       >
-        {running ? 'Generating…' : `Generate ${mode === 'text-to-video' ? 'from text' : 'from image'}`}
+        {running
+          ? t('form.generating')
+          : mode === 'text-to-video'
+            ? t('form.generateFromText')
+            : t('form.generateFromImage')}
       </button>
     </div>
   );
