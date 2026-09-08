@@ -146,9 +146,32 @@ export const en = {
   'studio.generate': 'Generate',
   'studio.storyboard': 'Storyboard',
   'studio.director': 'Director',
-  'studio.backendComfy': 'ComfyUI backend · local diffusion',
+  'studio.backendComfy': 'ComfyUI · local diffusion',
+  'studio.backendFal': 'fal.ai · video diffusion',
+  'studio.backendPollinations': 'Pollinations image + motion · free',
   'studio.backendProcedural': 'Procedural generator · local · no model',
   'studio.noBackend': 'No local backend for this yet.',
+  'studio.proceduralWarnTitle': 'This is not a photorealistic AI model',
+  'studio.proceduralWarnBody':
+    'The procedural generator builds abstract motion from your prompt — it cannot render a house, a person or a scene, and it ignores reference images. That is why you get coloured shapes. For real output connect a diffusion backend: ComfyUI (free, local, needs a GPU), fal.ai (real video from your reference image, pay-as-you-go with your own key), or try Pollinations (free image + camera move, may be rate-limited).',
+  'studio.proceduralWarnCta': 'Open AI Setup',
+
+  'hosted.title': 'Online generation (optional)',
+  'hosted.intro':
+    'Off by default. When on, these route ahead of the procedural generator. They send your prompt (and any reference frame) to a third-party service.',
+  'hosted.pollinations': 'Pollinations — free image + camera move',
+  'hosted.pollinationsNote':
+    'Keyless and free. Renders one photographic frame from your prompt, then animates it with a slow camera move — not a video-diffusion model (no construction sequences), but a real image instead of abstract shapes. Pollinations rate-limits by domain, so it may return 403; if it does, this falls back to the procedural preview. Sends the prompt to image.pollinations.ai.',
+  'hosted.imageModel': 'Image model',
+  'hosted.fal': 'fal.ai — real video diffusion (your key)',
+  'hosted.falNote':
+    'Actual image/text-to-video models (LTX, Kling, Wan…). Billed by fal per generation — there is no unlimited free tier. Create a key at',
+  'hosted.apiKey': 'fal.ai API key',
+  'hosted.falModel': 'Model route',
+  'hosted.falModelHint':
+    'e.g. fal-ai/ltx-video-13b-098/image-to-video · fal-ai/kling-video/v1.6/standard/image-to-video',
+  'hosted.disclosure':
+    'Keys and settings stay in this browser (localStorage). Pollinations traffic goes only to pollinations.ai; fal.ai traffic only to *.fal.run. Disable both to stay fully offline on the procedural generator.',
   'studio.resultHint':
     'Your generated clip will appear here. It becomes a normal asset — trim, colour, add effects, drop it on the timeline.',
 

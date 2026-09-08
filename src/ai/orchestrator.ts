@@ -11,6 +11,8 @@
 import { localProvider } from './providers/local/localProvider';
 import { proceduralProvider } from './providers/procedural/proceduralProvider';
 import { comfyUIProvider } from './providers/comfyui/comfyProvider';
+import { pollinationsProvider } from './providers/hosted/pollinationsProvider';
+import { falProvider } from './providers/hosted/falProvider';
 import type { VideoGenerationProvider } from './provider';
 
 export type GenerativeTask =
@@ -22,11 +24,19 @@ export type GenerativeTask =
   | 'region-edit';
 
 /**
- * Ordered by preference. ComfyUI (a real diffusion backend) routes ahead of
- * the procedural generator whenever it is enabled + reachable + has a
- * workflow; otherwise its capabilities are all false and it is skipped.
+ * Ordered by preference. Real-diffusion backends (ComfyUI local, then fal.ai
+ * with a key) route ahead of the free Pollinations image+motion path, which in
+ * turn routes ahead of the always-on procedural generator. Every optional
+ * adapter reports NO_CAPABILITIES until the user enables it, so the procedural
+ * generator still covers everything offline.
  */
-const providers: VideoGenerationProvider[] = [localProvider, comfyUIProvider, proceduralProvider];
+const providers: VideoGenerationProvider[] = [
+  localProvider,
+  comfyUIProvider,
+  falProvider,
+  pollinationsProvider,
+  proceduralProvider,
+];
 
 export function registerProvider(provider: VideoGenerationProvider, front = false): void {
   if (providers.some((p) => p.id === provider.id)) return;

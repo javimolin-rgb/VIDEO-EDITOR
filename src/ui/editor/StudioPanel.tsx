@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGenStore } from '@/state/genStore';
 import { useProjectStore } from '@/state/projectStore';
+import { useUIStore } from '@/state/uiStore';
 import { getMediaUrl } from '@/state/mediaUrls';
 import { useT, type MessageKey } from '@/i18n';
 import { route, type GenerativeTask } from '@/ai/orchestrator';
@@ -37,6 +38,7 @@ export function StudioPanel() {
   const reuseOffer = useGenStore((s) => s.reuseOffer);
   const dismissReuse = useGenStore((s) => s.dismissReuse);
   const lastResultAssetId = useGenStore((s) => s.lastResultAssetId);
+  const setWorkspace = useUIStore((s) => s.setWorkspace);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastAsset = assets.find((a) => a.id === lastResultAssetId);
@@ -57,6 +59,17 @@ export function StudioPanel() {
   }, [lastAsset]);
 
   if (!project) return null;
+
+  const activeId = route('text-to-video').provider?.id ?? 'procedural';
+  const backendLabel =
+    activeId === 'comfyui'
+      ? t('studio.backendComfy')
+      : activeId === 'fal'
+        ? t('studio.backendFal')
+        : activeId === 'pollinations'
+          ? t('studio.backendPollinations')
+          : t('studio.backendProcedural');
+  const isProcedural = activeId === 'procedural';
 
   return (
     <div className="panel-body" style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -83,12 +96,20 @@ export function StudioPanel() {
           </button>
         </div>
         <span className="spacer" />
-        <span className="pill good">
-          {route('text-to-video').provider?.id === 'comfyui'
-            ? t('studio.backendComfy')
-            : t('studio.backendProcedural')}
-        </span>
+        <span className={`pill ${isProcedural ? 'warn' : 'good'}`}>{backendLabel}</span>
       </div>
+
+      {isProcedural && studioView === 'generate' && (
+        <div className="notice" style={{ marginTop: 12 }}>
+          <strong>{t('studio.proceduralWarnTitle')}</strong>
+          <div style={{ marginTop: 4 }}>{t('studio.proceduralWarnBody')}</div>
+          <div style={{ marginTop: 10 }}>
+            <button className="primary" onClick={() => setWorkspace('ai-setup')}>
+              {t('studio.proceduralWarnCta')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {studioView === 'storyboard' && (
         <div style={{ marginTop: 14 }}>

@@ -148,9 +148,32 @@ export const es: Partial<Record<MessageKey, string>> = {
   'studio.generate': 'Generar',
   'studio.storyboard': 'Guion gráfico',
   'studio.director': 'Director',
-  'studio.backendComfy': 'Motor ComfyUI · difusión local',
+  'studio.backendComfy': 'ComfyUI · difusión local',
+  'studio.backendFal': 'fal.ai · difusión de vídeo',
+  'studio.backendPollinations': 'Imagen Pollinations + movimiento · gratis',
   'studio.backendProcedural': 'Generador procedural · local · sin modelo',
   'studio.noBackend': 'Aún no hay motor local para esto.',
+  'studio.proceduralWarnTitle': 'Esto no es un modelo de IA fotorrealista',
+  'studio.proceduralWarnBody':
+    'El generador procedural crea movimiento abstracto a partir de tu instrucción — no puede dibujar una casa, una persona ni una escena, e ignora las imágenes de referencia. Por eso salen formas de colores. Para un resultado real conecta un motor de difusión: ComfyUI (gratis, local, necesita GPU), fal.ai (vídeo real desde tu imagen de referencia, pago por uso con tu propia clave), o prueba Pollinations (imagen gratis + movimiento de cámara, puede estar limitado).',
+  'studio.proceduralWarnCta': 'Abrir Configurar IA',
+
+  'hosted.title': 'Generación en línea (opcional)',
+  'hosted.intro':
+    'Desactivado por defecto. Al activarlo, se usan antes que el generador procedural. Envían tu instrucción (y cualquier fotograma de referencia) a un servicio de terceros.',
+  'hosted.pollinations': 'Pollinations — imagen gratis + movimiento de cámara',
+  'hosted.pollinationsNote':
+    'Sin clave y gratis. Genera un fotograma fotográfico a partir de tu instrucción y lo anima con un movimiento de cámara lento — no es un modelo de difusión de vídeo (nada de secuencias de construcción), pero es una imagen real en vez de formas abstractas. Pollinations limita por dominio, así que puede devolver 403; si pasa, se recurre a la vista previa procedural. Envía la instrucción a image.pollinations.ai.',
+  'hosted.imageModel': 'Modelo de imagen',
+  'hosted.fal': 'fal.ai — difusión de vídeo real (tu clave)',
+  'hosted.falNote':
+    'Modelos reales de imagen/texto a vídeo (LTX, Kling, Wan…). fal cobra por cada generación — no hay plan gratis ilimitado. Crea una clave en',
+  'hosted.apiKey': 'Clave de API de fal.ai',
+  'hosted.falModel': 'Ruta del modelo',
+  'hosted.falModelHint':
+    'p. ej. fal-ai/ltx-video-13b-098/image-to-video · fal-ai/kling-video/v1.6/standard/image-to-video',
+  'hosted.disclosure':
+    'Las claves y ajustes se quedan en este navegador (localStorage). El tráfico de Pollinations va solo a pollinations.ai; el de fal.ai solo a *.fal.run. Desactiva ambos para quedarte totalmente sin conexión con el generador procedural.',
   'studio.resultHint':
     'Tu clip generado aparecerá aquí. Se convierte en un recurso normal — recórtalo, ajústale el color, añade efectos, ponlo en la línea de tiempo.',
 

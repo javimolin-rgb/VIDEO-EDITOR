@@ -35,15 +35,31 @@ runtime models**, with real licence / VRAM / hardware data
 
 Two backends, chosen automatically by capability (`src/ai/orchestrator.ts`):
 
-1. **ComfyUI backend** — *real diffusion*, opt-in. Run a local ComfyUI server
-   with LTX-Video / Wan 2.1 / HunyuanVideo, paste an API-format workflow, map
-   its prompt / size / seed inputs. Routes ahead of the procedural generator
-   whenever it is enabled + reachable + configured. Setup: `COMFYUI.md`.
-2. **Procedural generator** (`src/ai/providers/procedural/`) — the always-on
-   fallback. No model, no download; synthesises frames from the structured
-   prompt. Powers Text→Video, Image→Video, storyboard shots, Extend, Fill-gap
-   and B-roll. Clearly labelled "no model" — it is **not** a diffusion model,
-   so its output is abstract motion, not photoreal scenes.
+Router order (`src/ai/orchestrator.ts`): `local → comfyui → fal → pollinations
+→ procedural`. Every optional backend reports `NO_CAPABILITIES` until enabled,
+so the procedural generator always covers the task offline.
+
+1. **ComfyUI backend** (`src/ai/providers/comfyui/`) — *real diffusion*, opt-in,
+   free + unlimited if you have a GPU (local, or a free cloud/Colab ComfyUI).
+   Run the server, paste an API-format workflow, map its prompt / size / seed
+   inputs. Setup: `COMFYUI.md`.
+2. **fal.ai backend** (`src/ai/providers/hosted/falProvider.ts`) — *real
+   image/text-to-video diffusion* (LTX, Kling, Wan…), opt-in, **your own API
+   key**. This is the path for animating a reference image into an actual
+   video. Billed per generation by fal — there is no unlimited free tier. Key
+   is stored in `localStorage`, sent only to `*.fal.run`. **AI Setup → Online
+   generation**.
+3. **Pollinations backend** (`src/ai/providers/hosted/pollinationsProvider.ts`)
+   — keyless, free. Renders **one** photographic still from the prompt
+   (`image.pollinations.ai`) and animates it with a camera move. Not a
+   video-diffusion model (no construction sequences), but a real image instead
+   of abstract shapes. Pollinations rate-limits by domain and may `403` browser
+   origins; on failure this falls back to the procedural synth. Opt-in.
+4. **Procedural generator** (`src/ai/providers/procedural/`) — the always-on
+   fallback. No model, no download, no network; synthesises frames from the
+   structured prompt. It is **not** a diffusion model — output is abstract
+   motion, not photoreal scenes, and it ignores reference images. The Studio
+   shows a prominent warning when this is the active backend.
 
 ## Choosing a first diffusion model
 

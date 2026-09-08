@@ -3,6 +3,7 @@ import { detectHardware, type HardwareProfile } from '@/ai/hardware';
 import { listModels, type ModelTask } from '@/ai/registry';
 import { OnDeviceModels } from './OnDeviceModels';
 import { ComfyUISetup } from './ComfyUISetup';
+import { HostedSetup } from './HostedSetup';
 
 const TASK_LABEL: Record<ModelTask, string> = {
   video: 'Video models',
@@ -63,6 +64,8 @@ export function AiSetup() {
       )}
 
       <OnDeviceModels />
+
+      <HostedSetup />
 
       <ComfyUISetup />
 
