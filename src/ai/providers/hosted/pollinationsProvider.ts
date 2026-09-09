@@ -1,18 +1,21 @@
 /**
- * Pollinations image backend (opt-in, keyless, free). It is NOT a video
- * diffusion model: it renders one photographic still from the prompt and this
- * adapter animates it with a camera move, then encodes a real clip. That gets
- * the user a recognisable scene instead of the procedural generator's abstract
- * motion, with zero setup. For an actual generated video (construction
- * sequences, motion that isn't a pan) connect ComfyUI or fal.ai.
+ * Pollinations image backend (keyless, free). It renders one photographic
+ * still from the prompt and this adapter animates it with a camera move, then
+ * encodes a real clip — so the user gets the described scene instead of the
+ * procedural generator's abstract motion, with zero setup.
  *
- * Network: sends the prompt to image.pollinations.ai. Disabled → capabilities
- * are all false and the procedural generator handles the task offline.
+ * It is NOT a video-diffusion model: motion is a pan/zoom, not a generated
+ * sequence. For that, connect ComfyUI or fal.ai (LTX-2).
+ *
+ * Network: GET image.pollinations.ai. The free tier rate-limits to roughly one
+ * request every few seconds, so requests are spaced out and 429s are retried
+ * with backoff. If it still can't fetch an image the job FAILS with a clear
+ * message rather than silently producing coloured shapes.
  */
 
 import { createLogger } from '@/lib/logger';
 import { encodeCanvasSequence } from '@/video/encode';
-import { deriveParams, renderKenBurnsFrame, renderT2VFrame } from '@/ai/providers/procedural/synth';
+import { deriveParams, renderKenBurnsFrame } from '@/ai/providers/procedural/synth';
 import type {
   GenerationContext,
   GenerationRequestBase,
@@ -27,33 +30,57 @@ import { buildImagePrompt, pollinationsUrl } from './imagePrompt';
 
 const log = createLogger('ai');
 
-async function loadBitmap(blob: Blob): Promise<ImageBitmap> {
-  return createImageBitmap(blob);
+/** Free tier is ~1 req / 5 s. Serialise + space requests across all jobs. */
+const MIN_SPACING_MS = 5500;
+let lastRequestAt = 0;
+let chain: Promise<unknown> = Promise.resolve();
+
+function abortable(signal: AbortSignal, ms: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      clearTimeout(id);
+      reject(new DOMException('aborted', 'AbortError'));
+    });
+  });
 }
 
-async function fetchPollinationsBitmap(url: string, signal: AbortSignal): Promise<ImageBitmap> {
-  // Preferred: fetch → blob → bitmap (Pollinations sends CORS headers).
-  try {
-    const res = await fetch(url, { signal, mode: 'cors' });
+async function fetchImage(url: string, signal: AbortSignal, note: (s: string) => void): Promise<Blob> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const wait = lastRequestAt + MIN_SPACING_MS - Date.now();
+    if (wait > 0) {
+      note(`Waiting for the free tier… ${Math.ceil(wait / 1000)}s`);
+      await abortable(signal, wait);
+    }
+    lastRequestAt = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(url, { signal, mode: 'cors', referrerPolicy: 'no-referrer-when-downgrade' });
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e;
+      if (attempt === 3) throw new Error('Pollinations could not be reached (network/CORS).');
+      await abortable(signal, 3000);
+      continue;
+    }
     if (res.ok) {
       const blob = await res.blob();
-      if (blob.size > 0 && blob.type.startsWith('image/')) return loadBitmap(blob);
+      if (blob.size > 512 && blob.type.startsWith('image/')) return blob;
+      if (attempt === 3) throw new Error('Pollinations returned an unusable response.');
+    } else if (res.status === 429 || res.status === 503 || res.status === 502) {
+      const backoff = 6000 * (attempt + 1);
+      note(`Pollinations is busy (${res.status}); retrying in ${backoff / 1000}s…`);
+      await abortable(signal, backoff);
+      continue;
+    } else if (res.status === 403) {
+      throw new Error(
+        'Pollinations refused the request (403). Its free tier can block some domains — ' +
+          'connect fal.ai (LTX-2) or ComfyUI for reliable generation.',
+      );
+    } else {
+      throw new Error(`Pollinations error ${res.status}.`);
     }
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw e;
   }
-  // Fallback: crossorigin <img>.
-  return new Promise<ImageBitmap>((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.decoding = 'async';
-    img.onload = () => {
-      createImageBitmap(img).then(resolve, reject);
-    };
-    img.onerror = () => reject(new Error('Pollinations image request failed (network or CORS).'));
-    signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
-    img.src = url;
-  });
+  throw new Error('Pollinations kept rate-limiting. Wait ~30 s and try again, or use fal.ai / ComfyUI.');
 }
 
 export class PollinationsProvider implements VideoGenerationProvider {
@@ -79,8 +106,8 @@ export class PollinationsProvider implements VideoGenerationProvider {
   async health(): Promise<{ ok: boolean; detail: string }> {
     if (!this.cfg().enabled) return { ok: false, detail: 'Pollinations backend is disabled.' };
     if (typeof navigator !== 'undefined' && navigator.onLine === false)
-      return { ok: false, detail: 'Offline — the procedural generator will be used instead.' };
-    return { ok: true, detail: 'Pollinations reachable (keyless, free).' };
+      return { ok: false, detail: 'Offline — connect ComfyUI or fal.ai, or use the procedural generator.' };
+    return { ok: true, detail: 'Pollinations reachable (keyless, free, rate-limited).' };
   }
 
   async generateTextToVideo(req: GenerationRequestBase, ctx: GenerationContext): Promise<GenerationResult> {
@@ -96,7 +123,7 @@ export class PollinationsProvider implements VideoGenerationProvider {
       let blob: Blob | null = null;
       if (req.firstFrameDataUrl) blob = await fetch(req.firstFrameDataUrl).then((r) => r.blob());
       else if (req.firstFrameAssetId) blob = await getAssetBlob(req.firstFrameAssetId);
-      if (blob) base = await loadBitmap(blob);
+      if (blob) base = await createImageBitmap(blob);
     } catch {
       base = null;
     }
@@ -115,52 +142,47 @@ export class PollinationsProvider implements VideoGenerationProvider {
     const referrer = typeof location !== 'undefined' ? location.hostname || undefined : undefined;
 
     let bmp = providedFrame;
-    let usedFallback = false;
     if (!bmp) {
       const imgPrompt = buildImagePrompt(req);
       const url = pollinationsUrl(imgPrompt, { width, height, seed, model: cfg.model, referrer });
-      ctx.onPhase('generating', 0.05, 'Rendering the frame with Pollinations…');
+      ctx.onPhase('generating', 0.05, 'Generating the image with Pollinations…');
       log.info('pollinations request', { model: cfg.model, promptLen: imgPrompt.length });
-      try {
-        bmp = await fetchPollinationsBitmap(url, ctx.signal);
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') throw e;
-        // Pollinations blocked / offline — don't fail the job, fall back to the
-        // procedural synth so the user still gets a clip.
-        log.warn('pollinations unavailable, falling back to procedural', {
-          error: String((e as Error).message ?? e),
-        });
-        usedFallback = true;
-      }
+
+      // Serialise every Pollinations call so a storyboard doesn't 429 itself.
+      const mine = chain.then(() =>
+        fetchImage(url, ctx.signal, (s) => ctx.onPhase('generating', 0.1, s)),
+      );
+      chain = mine.catch(() => undefined);
+      const blob = await mine;
+      bmp = await createImageBitmap(blob);
     }
 
     const fps = req.fps;
     const totalFrames = Math.max(1, Math.round(req.durationSec * fps));
-    ctx.onPhase('generating', 0.45, `Animating ${totalFrames} frames…`);
+    ctx.onPhase('generating', 0.55, `Animating ${totalFrames} frames…`);
 
     const result = await encodeCanvasSequence({
       width,
       height,
       fps,
       totalFrames,
-      quality: Number(req.advanced?.quality ?? 0.7),
+      quality: Number(req.advanced?.quality ?? 0.75),
       signal: ctx.signal,
       drawFrame: (c, frame) => {
         const t01 = totalFrames <= 1 ? 0 : frame / (totalFrames - 1);
-        if (bmp) renderKenBurnsFrame(c, width, height, t01, bmp, bmp.width, bmp.height, params);
-        else renderT2VFrame(c, width, height, t01, params);
+        renderKenBurnsFrame(c, width, height, t01, bmp!, bmp!.width, bmp!.height, params);
       },
       onProgress: (f) =>
-        ctx.onPhase('generating', 0.45 + f * 0.5, `Frame ${Math.round(f * totalFrames)} / ${totalFrames}`),
+        ctx.onPhase('generating', 0.55 + f * 0.4, `Frame ${Math.round(f * totalFrames)} / ${totalFrames}`),
     });
 
     ctx.onPhase('post-processing', 0.98, 'Finalising clip…');
-    log.info('pollinations generation done', { bytes: result.blob.size, seed, usedFallback });
+    log.info('pollinations generation done', { bytes: result.blob.size, seed });
 
     return {
       jobId: ctx.jobId,
-      output: { blob: result.blob, mimeType: result.mimeType, durationSec: result.durationSec },
-      modelId: usedFallback ? 'procedural-synth' : `pollinations-${cfg.model}`,
+      output: { blob: result.blob, mimeType: result.mimeType, durationSec: req.durationSec },
+      modelId: `pollinations-${cfg.model}`,
       modelVersion: '1',
       seed,
     };

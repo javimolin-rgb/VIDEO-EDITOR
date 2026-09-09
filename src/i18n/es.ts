@@ -150,6 +150,7 @@ export const es: Partial<Record<MessageKey, string>> = {
   'studio.director': 'Director',
   'studio.backendComfy': 'ComfyUI · difusión local',
   'studio.backendFal': 'fal.ai · difusión de vídeo',
+  'studio.backendHfSpace': 'FLUX en un Space de HF gratis · imagen + movimiento',
   'studio.backendPollinations': 'Imagen Pollinations + movimiento · gratis',
   'studio.backendProcedural': 'Generador procedural · local · sin modelo',
   'studio.backendLocal': 'Motor en el dispositivo',
@@ -159,15 +160,18 @@ export const es: Partial<Record<MessageKey, string>> = {
   'studio.engineNotReady': 'sin configurar',
   'studio.proceduralWarnTitle': 'Esto no es un modelo de IA fotorrealista',
   'studio.proceduralWarnBody':
-    'El generador procedural crea movimiento abstracto a partir de tu instrucción — no puede dibujar una casa, una persona ni una escena, e ignora las imágenes de referencia. Por eso salen formas de colores. Para un resultado real conecta un motor de difusión: ComfyUI (gratis, local, necesita GPU), fal.ai (vídeo real desde tu imagen de referencia, pago por uso con tu propia clave), o prueba Pollinations (imagen gratis + movimiento de cámara, puede estar limitado).',
+    'El generador procedural crea movimiento abstracto a partir de tu instrucción — no puede dibujar una casa, una persona ni una escena, e ignora las imágenes de referencia. Por eso salen formas de colores. El motor gratuito «FLUX en un Space de Hugging Face» (activado por defecto) sí dibuja la escena descrita; si está apagado o todos los Spaces gratis están ocupados, vuelve a activarlo en Configurar IA, o conecta fal.ai (LTX-2) / ComfyUI para un vídeo generado real.',
   'studio.proceduralWarnCta': 'Abrir Configurar IA',
 
-  'hosted.title': 'Generación en línea (opcional)',
+  'hosted.title': 'Generación en línea',
   'hosted.intro':
-    'Desactivado por defecto. Al activarlo, se usan antes que el generador procedural. Envían tu instrucción (y cualquier fotograma de referencia) a un servicio de terceros.',
-  'hosted.pollinations': 'Pollinations — imagen gratis + movimiento de cámara',
+    'Se usan antes que el generador procedural y envían tu instrucción (y cualquier fotograma de referencia) a un servicio de terceros.',
+  'hosted.hfSpace': 'Space de Hugging Face (FLUX) — imagen gratis + movimiento · ACTIVADO',
+  'hosted.hfSpaceNote':
+    'Por defecto. Sin clave y gratis: genera la escena en un Space público de FLUX.1 y luego anima el fotograma con un movimiento de cámara. No es difusión de vídeo (nada de secuencias de construcción), pero es una imagen real de lo que describiste. Los Spaces gratis se duermen y tienen cuota por hora — la app prueba varios; si todos están ocupados, el trabajo lo indica en vez de hacer formas abstractas.',
+  'hosted.pollinations': 'Pollinations — imagen gratis (ahora pide CAPTCHA)',
   'hosted.pollinationsNote':
-    'Sin clave y gratis. Genera un fotograma fotográfico a partir de tu instrucción y lo anima con un movimiento de cámara lento — no es un modelo de difusión de vídeo (nada de secuencias de construcción), pero es una imagen real en vez de formas abstractas. Pollinations limita por dominio, así que puede devolver 403; si pasa, se recurre a la vista previa procedural. Envía la instrucción a image.pollinations.ai.',
+    'Antes era sin clave, pero Pollinations ahora exige un CAPTCHA (Cloudflare Turnstile) para las peticiones del navegador, así que devuelve 403 aquí. Se deja como opción manual por si eso cambia. Usa el Space de Hugging Face de arriba.',
   'hosted.imageModel': 'Modelo de imagen',
   'hosted.fal': 'fal.ai — difusión de vídeo real, incl. LTX-2 (tu clave)',
   'hosted.falNote':

@@ -238,6 +238,7 @@ function BackendPicker({ task }: { task: string }) {
 
   const LABEL: Record<string, string> = {
     procedural: t('studio.backendProcedural'),
+    'hf-space': t('studio.backendHfSpace'),
     pollinations: t('studio.backendPollinations'),
     comfyui: t('studio.backendComfy'),
     fal: t('studio.backendFal'),

@@ -38,8 +38,24 @@ export function HostedSetup() {
         {t('hosted.intro')}
       </p>
 
-      {/* Pollinations */}
+      {/* Hugging Face Space — the default free path */}
       <div className="model-row" style={{ display: 'block', padding: 12 }}>
+        <label className="row" style={{ fontSize: 13, fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            style={{ width: 'auto' }}
+            checked={cfg.hfSpace.enabled}
+            onChange={(e) => persist({ ...cfg, hfSpace: { enabled: e.target.checked } })}
+          />
+          {t('hosted.hfSpace')}
+        </label>
+        <div className="muted" style={{ fontSize: 11, margin: '6px 0 4px' }}>
+          {t('hosted.hfSpaceNote')}
+        </div>
+      </div>
+
+      {/* Pollinations (manual — CAPTCHA-walled) */}
+      <div className="model-row" style={{ display: 'block', padding: 12, marginTop: 8 }}>
         <label className="row" style={{ fontSize: 13, fontWeight: 600 }}>
           <input
             type="checkbox"
@@ -71,9 +87,8 @@ export function HostedSetup() {
               })
             }
           >
-            <option value="flux">flux — balanced</option>
-            <option value="flux-realism">flux-realism — photographic</option>
-            <option value="turbo">turbo — fastest</option>
+            <option value="flux">Default — best detail</option>
+            <option value="turbo">Turbo — faster</option>
           </select>
         </div>
       </div>

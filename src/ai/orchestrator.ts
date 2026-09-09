@@ -11,6 +11,7 @@
 import { localProvider } from './providers/local/localProvider';
 import { proceduralProvider } from './providers/procedural/proceduralProvider';
 import { comfyUIProvider } from './providers/comfyui/comfyProvider';
+import { hfSpaceProvider } from './providers/hosted/hfSpaceProvider';
 import { pollinationsProvider } from './providers/hosted/pollinationsProvider';
 import { falProvider } from './providers/hosted/falProvider';
 import type { VideoGenerationProvider } from './provider';
@@ -34,6 +35,7 @@ const providers: VideoGenerationProvider[] = [
   localProvider,
   comfyUIProvider,
   falProvider,
+  hfSpaceProvider,
   pollinationsProvider,
   proceduralProvider,
 ];

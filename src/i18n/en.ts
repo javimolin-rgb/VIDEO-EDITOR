@@ -148,6 +148,7 @@ export const en = {
   'studio.director': 'Director',
   'studio.backendComfy': 'ComfyUI · local diffusion',
   'studio.backendFal': 'fal.ai · video diffusion',
+  'studio.backendHfSpace': 'FLUX on a free HF Space · image + motion',
   'studio.backendPollinations': 'Pollinations image + motion · free',
   'studio.backendProcedural': 'Procedural generator · local · no model',
   'studio.backendLocal': 'On-device runtime',
@@ -157,15 +158,18 @@ export const en = {
   'studio.engineNotReady': 'not set up',
   'studio.proceduralWarnTitle': 'This is not a photorealistic AI model',
   'studio.proceduralWarnBody':
-    'The procedural generator builds abstract motion from your prompt — it cannot render a house, a person or a scene, and it ignores reference images. That is why you get coloured shapes. For real output connect a diffusion backend: ComfyUI (free, local, needs a GPU), fal.ai (real video from your reference image, pay-as-you-go with your own key), or try Pollinations (free image + camera move, may be rate-limited).',
+    'The procedural generator builds abstract motion from your prompt — it cannot render a house, a person or a scene, and it ignores reference images. That is why you get coloured shapes. The free "FLUX on a Hugging Face Space" backend (on by default) does render the described scene; if it is off or every free Space is busy, turn it back on in AI Setup, or connect fal.ai (LTX-2) / ComfyUI for a real generated video.',
   'studio.proceduralWarnCta': 'Open AI Setup',
 
-  'hosted.title': 'Online generation (optional)',
+  'hosted.title': 'Online generation',
   'hosted.intro':
-    'Off by default. When on, these route ahead of the procedural generator. They send your prompt (and any reference frame) to a third-party service.',
-  'hosted.pollinations': 'Pollinations — free image + camera move',
+    'These route ahead of the procedural generator and send your prompt (and any reference frame) to a third-party service.',
+  'hosted.hfSpace': 'Hugging Face Space (FLUX) — free image + camera move · ON',
+  'hosted.hfSpaceNote':
+    'Default. Keyless and free: renders the scene on a public FLUX.1 Space, then animates the still with a camera move. Not a video-diffusion model (no construction sequences), but a real image of what you described. Free Spaces sleep and have an hourly quota — the app tries several; if all are busy the job says so rather than making abstract shapes.',
+  'hosted.pollinations': 'Pollinations — free image (needs a CAPTCHA now)',
   'hosted.pollinationsNote':
-    'Keyless and free. Renders one photographic frame from your prompt, then animates it with a slow camera move — not a video-diffusion model (no construction sequences), but a real image instead of abstract shapes. Pollinations rate-limits by domain, so it may return 403; if it does, this falls back to the procedural preview. Sends the prompt to image.pollinations.ai.',
+    'Was keyless, but Pollinations now requires a Cloudflare Turnstile CAPTCHA for browser requests, so it returns 403 here. Left as a manual option in case that changes. Use the Hugging Face Space backend above instead.',
   'hosted.imageModel': 'Image model',
   'hosted.fal': 'fal.ai — real video diffusion incl. LTX-2 (your key)',
   'hosted.falNote':
