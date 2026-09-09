@@ -6,6 +6,17 @@ import {
   type HostedConfig,
 } from '@/ai/providers/hosted/config';
 
+/** Curated model routes. LTX-2 (github.com/Lightricks/LTX-2) is the recommended
+ *  open model; the exact fal slug moves, so the field stays editable. */
+const FAL_PRESETS: { label: string; route: string }[] = [
+  { label: 'LTX-2 · image → video (Lightricks, open)', route: 'fal-ai/ltxv-2/image-to-video' },
+  { label: 'LTX-2 · text → video (Lightricks, open)', route: 'fal-ai/ltxv-2/text-to-video' },
+  { label: 'LTX-Video 13B v0.9.8 · image → video', route: 'fal-ai/ltx-video-13b-098/image-to-video' },
+  { label: 'LTX-Video 13B v0.9.8 · text → video', route: 'fal-ai/ltx-video-13b-098/text-to-video' },
+  { label: 'Kling 1.6 standard · image → video', route: 'fal-ai/kling-video/v1.6/standard/image-to-video' },
+  { label: 'Wan 2.2 · image → video', route: 'fal-ai/wan/v2.2-a14b/image-to-video' },
+];
+
 /**
  * Optional online generation backends (spec §94 — opt-in). Pollinations is
  * keyless and free (image + camera move). fal.ai is real video diffusion with
@@ -96,12 +107,34 @@ export function HostedSetup() {
         </div>
         <div className="field">
           <label>{t('hosted.falModel')}</label>
+          <select
+            value={FAL_PRESETS.some((p) => p.route === cfg.fal.model) ? cfg.fal.model : '__custom'}
+            onChange={(e) => {
+              if (e.target.value !== '__custom')
+                persist({ ...cfg, fal: { ...cfg.fal, model: e.target.value } });
+            }}
+          >
+            {FAL_PRESETS.map((p) => (
+              <option key={p.route} value={p.route}>
+                {p.label}
+              </option>
+            ))}
+            <option value="__custom">{t('hosted.falModelCustom')}</option>
+          </select>
           <input
+            style={{ marginTop: 6 }}
             value={cfg.fal.model}
             onChange={(e) => persist({ ...cfg, fal: { ...cfg.fal, model: e.target.value.trim() } })}
           />
           <div className="muted" style={{ fontSize: 11 }}>
-            {t('hosted.falModelHint')}
+            {t('hosted.falModelHint')}{' '}
+            <a href="https://fal.ai/models?keywords=ltx" target="_blank" rel="noreferrer">
+              fal.ai/models
+            </a>{' '}
+            ·{' '}
+            <a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noreferrer">
+              LTX-2 weights
+            </a>
           </div>
         </div>
       </div>

@@ -156,6 +156,8 @@ interface ProjectState {
 
   // assets
   importFiles: (files: FileList | File[]) => Promise<void>;
+  /** Import a generated audio blob and (optionally) place it at the playhead. */
+  importGeneratedAudio: (blob: Blob, name: string, place?: boolean) => Promise<void>;
   removeAsset: (assetId: string) => Promise<void>;
   renameAsset: (assetId: string, name: string) => Promise<void>;
   setAssetRole: (assetId: string, role: AssetRole) => Promise<void>;
@@ -786,6 +788,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (added.length > 0) {
       onImportComplete?.([...new Set(added.map((a) => a.kind))]);
     }
+  },
+
+  async importGeneratedAudio(blob, name, place = true) {
+    const before = new Set(get().assets.map((a) => a.id));
+    const file = new File([blob], name, { type: blob.type || 'audio/wav' });
+    await get().importFiles([file]);
+    const added = get().assets.find((a) => !before.has(a.id) && a.kind === 'audio');
+    if (!added || !place) return;
+    const project = get().project;
+    if (!project) return;
+    let track = project.timeline.tracks.find((t) => t.kind === 'audio');
+    if (!track) {
+      get().addTrack('audio');
+      track = get().project?.timeline.tracks.find((t) => t.kind === 'audio');
+    }
+    if (track) get().addClipFromAsset(added.id, track.id, project.timeline.playheadFrame);
   },
 
   async removeAsset(assetId) {

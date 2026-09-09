@@ -52,6 +52,36 @@ export function listProviders(): readonly VideoGenerationProvider[] {
   return providers;
 }
 
+// ─── manual backend override (spec §100 — the user may pin a backend) ────────
+
+const PREF_KEY = 'aiv.preferredProvider';
+
+function loadPreferred(): string | null {
+  try {
+    const v = localStorage.getItem(PREF_KEY);
+    return v && v !== 'auto' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+let preferredId: string | null = loadPreferred();
+
+/** Pin generation to one backend id, or `null` for automatic routing. */
+export function setPreferredProvider(id: string | null): void {
+  preferredId = id;
+  try {
+    if (id) localStorage.setItem(PREF_KEY, id);
+    else localStorage.removeItem(PREF_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+export function getPreferredProvider(): string | null {
+  return preferredId;
+}
+
 function supports(provider: VideoGenerationProvider, task: GenerativeTask): boolean {
   const c = provider.capabilities;
   switch (task) {
@@ -75,9 +105,25 @@ function supports(provider: VideoGenerationProvider, task: GenerativeTask): bool
 export interface RouteResult {
   provider: VideoGenerationProvider | null;
   reason: string;
+  /** True when the pinned backend could not take the task and auto ran instead. */
+  overrideIgnored?: boolean;
 }
 
 export function route(task: GenerativeTask): RouteResult {
+  if (preferredId) {
+    const pinned = providers.find((p) => p.id === preferredId);
+    if (pinned && supports(pinned, task)) {
+      return { provider: pinned, reason: `Pinned to ${pinned.name}` };
+    }
+    const auto = providers.find((p) => supports(p, task));
+    if (auto) {
+      return {
+        provider: auto,
+        reason: `${pinned?.name ?? preferredId} can't do this — using ${auto.name}`,
+        overrideIgnored: true,
+      };
+    }
+  }
   const match = providers.find((p) => supports(p, task));
   if (match) return { provider: match, reason: `Using ${match.name}` };
   return {

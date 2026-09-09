@@ -70,6 +70,24 @@ export const LOCAL_MODELS: LocalModelInfo[] = [
     license: 'MIT',
     note: '99 languages, auto-detected. Slower, more accurate.',
   },
+  {
+    id: 'tts-es',
+    hubId: 'Xenova/mms-tts-spa',
+    task: 'tts',
+    label: 'Voice — Spanish (MMS-TTS)',
+    approxBytes: 60 * 1024 * 1024,
+    license: 'CC-BY-NC 4.0',
+    note: 'Reads a script to a voice-over clip. Runs on-device.',
+  },
+  {
+    id: 'tts-en',
+    hubId: 'Xenova/mms-tts-eng',
+    task: 'tts',
+    label: 'Voice — English (MMS-TTS)',
+    approxBytes: 60 * 1024 * 1024,
+    license: 'CC-BY-NC 4.0',
+    note: 'Reads a script to a voice-over clip. Runs on-device.',
+  },
 ];
 
 export function getLocalModel(id: string): LocalModelInfo | undefined {

@@ -150,7 +150,11 @@ export const en = {
   'studio.backendFal': 'fal.ai · video diffusion',
   'studio.backendPollinations': 'Pollinations image + motion · free',
   'studio.backendProcedural': 'Procedural generator · local · no model',
+  'studio.backendLocal': 'On-device runtime',
   'studio.noBackend': 'No local backend for this yet.',
+  'studio.engine': 'Engine',
+  'studio.engineAuto': 'Auto (best available)',
+  'studio.engineNotReady': 'not set up',
   'studio.proceduralWarnTitle': 'This is not a photorealistic AI model',
   'studio.proceduralWarnBody':
     'The procedural generator builds abstract motion from your prompt — it cannot render a house, a person or a scene, and it ignores reference images. That is why you get coloured shapes. For real output connect a diffusion backend: ComfyUI (free, local, needs a GPU), fal.ai (real video from your reference image, pay-as-you-go with your own key), or try Pollinations (free image + camera move, may be rate-limited).',
@@ -163,13 +167,14 @@ export const en = {
   'hosted.pollinationsNote':
     'Keyless and free. Renders one photographic frame from your prompt, then animates it with a slow camera move — not a video-diffusion model (no construction sequences), but a real image instead of abstract shapes. Pollinations rate-limits by domain, so it may return 403; if it does, this falls back to the procedural preview. Sends the prompt to image.pollinations.ai.',
   'hosted.imageModel': 'Image model',
-  'hosted.fal': 'fal.ai — real video diffusion (your key)',
+  'hosted.fal': 'fal.ai — real video diffusion incl. LTX-2 (your key)',
   'hosted.falNote':
-    'Actual image/text-to-video models (LTX, Kling, Wan…). Billed by fal per generation — there is no unlimited free tier. Create a key at',
+    'Actual image/text-to-video models — LTX-2 (open weights by Lightricks), Kling, Wan… Billed by fal per generation; there is no unlimited free tier. Create a key at',
   'hosted.apiKey': 'fal.ai API key',
-  'hosted.falModel': 'Model route',
+  'hosted.falModel': 'Model',
+  'hosted.falModelCustom': 'Custom route…',
   'hosted.falModelHint':
-    'e.g. fal-ai/ltx-video-13b-098/image-to-video · fal-ai/kling-video/v1.6/standard/image-to-video',
+    'The exact route can change — copy the current one from',
   'hosted.disclosure':
     'Keys and settings stay in this browser (localStorage). Pollinations traffic goes only to pollinations.ai; fal.ai traffic only to *.fal.run. Disable both to stay fully offline on the procedural generator.',
   'studio.resultHint':
@@ -207,6 +212,24 @@ export const en = {
   'form.references': 'References',
   'form.referencesHint':
     'Add images/clips and tell the model what each one is for. The generator weights them by role and priority.',
+
+  'sfx.title': 'Sound effects (synthesised, royalty-free)',
+  'sfx.note': 'Generated on-device with Web Audio — no samples, free to use. ▶ previews, ＋ drops it on an audio track at the playhead.',
+  'sfx.preview': 'Preview',
+  'sfx.added': '“{name}” added to the timeline.',
+
+  'voice.title': 'AI voice-over (read the script)',
+  'voice.note': 'Read the script aloud instantly with the browser voice, or render it to a voice-over clip with an on-device model.',
+  'voice.placeholder': 'Type or paste the script the voice should read…',
+  'voice.voice': 'Browser voice',
+  'voice.speed': 'Speed',
+  'voice.read': 'Read aloud',
+  'voice.render': 'Render voice-over',
+  'voice.downloading': 'Downloading voice model…',
+  'voice.rendering': 'Rendering voice…',
+  'voice.added': 'Voice-over added to an audio track.',
+  'voice.noWebSpeech': 'This browser has no speech synthesis.',
+  'voice.modelNote': 'Render uses MMS-TTS (~60 MB, downloaded once, then offline). "Read aloud" uses the built-in browser voice and needs no download.',
 } as const;
 
 export type MessageKey = keyof typeof en;

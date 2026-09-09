@@ -1,10 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGenStore } from '@/state/genStore';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import { getMediaUrl } from '@/state/mediaUrls';
 import { useT, type MessageKey } from '@/i18n';
-import { route, type GenerativeTask } from '@/ai/orchestrator';
+import {
+  route,
+  listProviders,
+  getPreferredProvider,
+  setPreferredProvider,
+  type GenerativeTask,
+} from '@/ai/orchestrator';
 import { PromptForm } from './studio/PromptForm';
 import { ReferenceBoard } from './studio/ReferenceBoard';
 import { GenerationHistory } from './studio/GenerationHistory';
@@ -60,15 +66,8 @@ export function StudioPanel() {
 
   if (!project) return null;
 
-  const activeId = route('text-to-video').provider?.id ?? 'procedural';
-  const backendLabel =
-    activeId === 'comfyui'
-      ? t('studio.backendComfy')
-      : activeId === 'fal'
-        ? t('studio.backendFal')
-        : activeId === 'pollinations'
-          ? t('studio.backendPollinations')
-          : t('studio.backendProcedural');
+  const activeRoute = route('text-to-video');
+  const activeId = activeRoute.provider?.id ?? 'procedural';
   const isProcedural = activeId === 'procedural';
 
   return (
@@ -96,7 +95,7 @@ export function StudioPanel() {
           </button>
         </div>
         <span className="spacer" />
-        <span className={`pill ${isProcedural ? 'warn' : 'good'}`}>{backendLabel}</span>
+        <BackendPicker task={mode} />
       </div>
 
       {isProcedural && studioView === 'generate' && (
@@ -216,6 +215,68 @@ export function StudioPanel() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** In-Studio backend selector — pin generation to one AI, or leave it Auto. */
+function BackendPicker({ task }: { task: string }) {
+  const t = useT();
+  const [pinned, setPinned] = useState<string | null>(getPreferredProvider());
+  const gt = (
+    task === 'image-to-video' ? 'image-to-video' : 'text-to-video'
+  ) as GenerativeTask;
+  const r = route(gt);
+  const activeId = r.provider?.id ?? '—';
+
+  const supportsTask = (id: string) => {
+    const p = listProviders().find((x) => x.id === id);
+    if (!p) return false;
+    const c = p.capabilities;
+    return gt === 'image-to-video' ? c.imageToVideo : c.textToVideo;
+  };
+
+  const LABEL: Record<string, string> = {
+    procedural: t('studio.backendProcedural'),
+    pollinations: t('studio.backendPollinations'),
+    comfyui: t('studio.backendComfy'),
+    fal: t('studio.backendFal'),
+    local: t('studio.backendLocal'),
+  };
+
+  return (
+    <div className="col" style={{ gap: 2, alignItems: 'flex-end' }}>
+      <div className="row" style={{ gap: 6 }}>
+        <span className="muted" style={{ fontSize: 11 }}>
+          {t('studio.engine')}
+        </span>
+        <select
+          value={pinned ?? 'auto'}
+          style={{ width: 'auto', minWidth: 150, fontSize: 12 }}
+          onChange={(e) => {
+            const v = e.target.value === 'auto' ? null : e.target.value;
+            setPreferredProvider(v);
+            setPinned(v);
+          }}
+        >
+          <option value="auto">{t('studio.engineAuto')}</option>
+          {listProviders()
+            .filter((p) => p.id !== 'local')
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {LABEL[p.id] ?? p.name}
+                {supportsTask(p.id) ? '' : ` — ${t('studio.engineNotReady')}`}
+              </option>
+            ))}
+        </select>
+      </div>
+      <span
+        className={`pill ${activeId === 'procedural' ? 'warn' : 'good'}`}
+        style={{ fontSize: 10 }}
+      >
+        {r.overrideIgnored ? '⚠ ' : ''}
+        {LABEL[activeId] ?? activeId}
+      </span>
     </div>
   );
 }

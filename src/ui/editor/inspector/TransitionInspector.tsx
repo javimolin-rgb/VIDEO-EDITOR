@@ -2,7 +2,20 @@ import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import type { Transition, TransitionType } from '@/domain/types';
 
-const TYPES: TransitionType[] = ['dissolve', 'fade-color', 'wipe', 'slide', 'zoom'];
+const TYPES: TransitionType[] = [
+  'dissolve',
+  'fade-color',
+  'wipe',
+  'slide',
+  'push',
+  'zoom',
+  'spin',
+  'circle',
+  'blur',
+  'whip',
+  'flash',
+  'pixelate',
+];
 
 export function TransitionInspector({ transition }: { transition: Transition }) {
   const update = useProjectStore((s) => s.updateTransition);
@@ -52,7 +65,20 @@ export function TransitionInspector({ transition }: { transition: Transition }) 
         </div>
       )}
 
-      {transition.type === 'wipe' && (
+      {transition.type === 'flash' && (
+        <div className="field">
+          <label>Colour</label>
+          <input
+            type="color"
+            value={String(transition.params.color ?? '#ffffff')}
+            onChange={(e) =>
+              update(transition.id, { params: { ...transition.params, color: e.target.value } })
+            }
+          />
+        </div>
+      )}
+
+      {(transition.type === 'wipe' || transition.type === 'push') && (
         <div className="field">
           <label>Direction</label>
           <select

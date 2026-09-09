@@ -95,6 +95,88 @@ export const EFFECT_DEFS: Record<EffectType, EffectDef> = {
     render: 'filter',
     params: [{ key: 'amount', label: 'Amount', min: 0, max: 1, step: 0.02, default: 1 }],
   },
+  contrast: {
+    type: 'contrast',
+    label: 'Contrast',
+    category: 'color',
+    render: 'filter',
+    params: [{ key: 'amount', label: 'Amount', min: 0, max: 2.5, step: 0.02, default: 1.25 }],
+  },
+  saturation: {
+    type: 'saturation',
+    label: 'Saturation',
+    category: 'color',
+    render: 'filter',
+    params: [{ key: 'amount', label: 'Amount', min: 0, max: 3, step: 0.02, default: 1.4 }],
+  },
+  duotone: {
+    type: 'duotone',
+    label: 'Duotone',
+    category: 'color',
+    render: 'filter',
+    params: [
+      { key: 'hue', label: 'Hue', min: -180, max: 180, step: 1, default: 200, unit: '°' },
+      { key: 'strength', label: 'Strength', min: 0, max: 2, step: 0.02, default: 1 },
+    ],
+  },
+  'blur-direction': {
+    type: 'blur-direction',
+    label: 'Motion blur',
+    category: 'blur',
+    render: 'overlay',
+    params: [
+      { key: 'amount', label: 'Length', min: 0, max: 40, step: 1, default: 12, unit: 'px' },
+      { key: 'angle', label: 'Angle', min: -180, max: 180, step: 1, default: 0, unit: '°' },
+    ],
+  },
+  scanlines: {
+    type: 'scanlines',
+    label: 'Scanlines',
+    category: 'texture',
+    render: 'overlay',
+    params: [
+      { key: 'amount', label: 'Amount', min: 0, max: 1, step: 0.02, default: 0.35 },
+      { key: 'size', label: 'Line size', min: 1, max: 8, step: 1, default: 2, unit: 'px' },
+    ],
+  },
+  chromatic: {
+    type: 'chromatic',
+    label: 'Chromatic aberration',
+    category: 'stylize',
+    render: 'overlay',
+    params: [{ key: 'amount', label: 'Offset', min: 0, max: 24, step: 0.5, default: 5, unit: 'px' }],
+  },
+  bloom: {
+    type: 'bloom',
+    label: 'Bloom / glow',
+    category: 'stylize',
+    render: 'overlay',
+    params: [
+      { key: 'amount', label: 'Amount', min: 0, max: 1, step: 0.02, default: 0.5 },
+      { key: 'radius', label: 'Radius', min: 2, max: 60, step: 1, default: 18, unit: 'px' },
+    ],
+  },
+  pixelate: {
+    type: 'pixelate',
+    label: 'Pixelate',
+    category: 'stylize',
+    render: 'overlay',
+    params: [{ key: 'size', label: 'Block', min: 2, max: 64, step: 1, default: 12, unit: 'px' }],
+  },
+  vhs: {
+    type: 'vhs',
+    label: 'VHS',
+    category: 'texture',
+    render: 'overlay',
+    params: [{ key: 'amount', label: 'Amount', min: 0, max: 1, step: 0.02, default: 0.5 }],
+  },
+  mirror: {
+    type: 'mirror',
+    label: 'Mirror',
+    category: 'stylize',
+    render: 'overlay',
+    params: [{ key: 'axis', label: 'Axis (0=L→R, 1=R→L, 2=T→B, 3=B→T)', min: 0, max: 3, step: 1, default: 0 }],
+  },
 };
 
 export const EFFECT_LIST: EffectDef[] = Object.values(EFFECT_DEFS);

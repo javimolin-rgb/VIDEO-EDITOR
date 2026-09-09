@@ -158,7 +158,17 @@ export type EffectType =
   | 'sepia'
   | 'hue-rotate'
   | 'brightness'
-  | 'invert';
+  | 'invert'
+  | 'contrast'
+  | 'saturation'
+  | 'blur-direction'
+  | 'scanlines'
+  | 'chromatic'
+  | 'bloom'
+  | 'pixelate'
+  | 'vhs'
+  | 'duotone'
+  | 'mirror';
 
 export interface EffectInstance {
   id: string;
@@ -196,7 +206,19 @@ export type ClipKeyframes = Partial<Record<AnimatableParam, Keyframe[]>>;
 // Transitions (spec §42, §108) — standard (non-generative) set for Phase 2
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TransitionType = 'dissolve' | 'fade-color' | 'wipe' | 'slide' | 'zoom';
+export type TransitionType =
+  | 'dissolve'
+  | 'fade-color'
+  | 'wipe'
+  | 'slide'
+  | 'zoom'
+  | 'circle'
+  | 'push'
+  | 'blur'
+  | 'flash'
+  | 'pixelate'
+  | 'spin'
+  | 'whip';
 
 export interface Transition {
   id: string;

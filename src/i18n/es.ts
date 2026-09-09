@@ -152,7 +152,11 @@ export const es: Partial<Record<MessageKey, string>> = {
   'studio.backendFal': 'fal.ai · difusión de vídeo',
   'studio.backendPollinations': 'Imagen Pollinations + movimiento · gratis',
   'studio.backendProcedural': 'Generador procedural · local · sin modelo',
+  'studio.backendLocal': 'Motor en el dispositivo',
   'studio.noBackend': 'Aún no hay motor local para esto.',
+  'studio.engine': 'Motor',
+  'studio.engineAuto': 'Automático (el mejor disponible)',
+  'studio.engineNotReady': 'sin configurar',
   'studio.proceduralWarnTitle': 'Esto no es un modelo de IA fotorrealista',
   'studio.proceduralWarnBody':
     'El generador procedural crea movimiento abstracto a partir de tu instrucción — no puede dibujar una casa, una persona ni una escena, e ignora las imágenes de referencia. Por eso salen formas de colores. Para un resultado real conecta un motor de difusión: ComfyUI (gratis, local, necesita GPU), fal.ai (vídeo real desde tu imagen de referencia, pago por uso con tu propia clave), o prueba Pollinations (imagen gratis + movimiento de cámara, puede estar limitado).',
@@ -165,13 +169,14 @@ export const es: Partial<Record<MessageKey, string>> = {
   'hosted.pollinationsNote':
     'Sin clave y gratis. Genera un fotograma fotográfico a partir de tu instrucción y lo anima con un movimiento de cámara lento — no es un modelo de difusión de vídeo (nada de secuencias de construcción), pero es una imagen real en vez de formas abstractas. Pollinations limita por dominio, así que puede devolver 403; si pasa, se recurre a la vista previa procedural. Envía la instrucción a image.pollinations.ai.',
   'hosted.imageModel': 'Modelo de imagen',
-  'hosted.fal': 'fal.ai — difusión de vídeo real (tu clave)',
+  'hosted.fal': 'fal.ai — difusión de vídeo real, incl. LTX-2 (tu clave)',
   'hosted.falNote':
-    'Modelos reales de imagen/texto a vídeo (LTX, Kling, Wan…). fal cobra por cada generación — no hay plan gratis ilimitado. Crea una clave en',
+    'Modelos reales de imagen/texto a vídeo — LTX-2 (pesos abiertos de Lightricks), Kling, Wan… fal cobra por cada generación; no hay plan gratis ilimitado. Crea una clave en',
   'hosted.apiKey': 'Clave de API de fal.ai',
-  'hosted.falModel': 'Ruta del modelo',
+  'hosted.falModel': 'Modelo',
+  'hosted.falModelCustom': 'Ruta personalizada…',
   'hosted.falModelHint':
-    'p. ej. fal-ai/ltx-video-13b-098/image-to-video · fal-ai/kling-video/v1.6/standard/image-to-video',
+    'La ruta exacta puede cambiar — copia la actual de',
   'hosted.disclosure':
     'Las claves y ajustes se quedan en este navegador (localStorage). El tráfico de Pollinations va solo a pollinations.ai; el de fal.ai solo a *.fal.run. Desactiva ambos para quedarte totalmente sin conexión con el generador procedural.',
   'studio.resultHint':
@@ -209,4 +214,22 @@ export const es: Partial<Record<MessageKey, string>> = {
   'form.references': 'Referencias',
   'form.referencesHint':
     'Añade imágenes/clips y dile al modelo para qué sirve cada uno. El generador los pondera por función y prioridad.',
+
+  'sfx.title': 'Efectos de sonido (sintetizados, libres de derechos)',
+  'sfx.note': 'Generados en el dispositivo con Web Audio — sin samples, de uso libre. ▶ escucha, ＋ lo coloca en una pista de audio en el cabezal.',
+  'sfx.preview': 'Escuchar',
+  'sfx.added': '«{name}» añadido a la línea de tiempo.',
+
+  'voice.title': 'Voz IA (leer el guión)',
+  'voice.note': 'Lee el guión al instante con la voz del navegador, o renderízalo a un clip de voz con un modelo en el dispositivo.',
+  'voice.placeholder': 'Escribe o pega el guión que debe leer la voz…',
+  'voice.voice': 'Voz del navegador',
+  'voice.speed': 'Velocidad',
+  'voice.read': 'Leer en voz alta',
+  'voice.render': 'Renderizar voz',
+  'voice.downloading': 'Descargando modelo de voz…',
+  'voice.rendering': 'Renderizando voz…',
+  'voice.added': 'Voz añadida a una pista de audio.',
+  'voice.noWebSpeech': 'Este navegador no tiene síntesis de voz.',
+  'voice.modelNote': 'El renderizado usa MMS-TTS (~60 MB, se descarga una vez y luego funciona sin conexión). «Leer en voz alta» usa la voz del navegador y no descarga nada.',
 };

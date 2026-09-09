@@ -121,6 +121,19 @@ export function buildFilterString(color: ColorGrade, effects: EffectInstance[]):
       case 'invert':
         parts.push(`invert(${(fx.params.amount ?? 1).toFixed(3)})`);
         break;
+      case 'contrast':
+        parts.push(`contrast(${(fx.params.amount ?? 1).toFixed(3)})`);
+        break;
+      case 'saturation':
+        parts.push(`saturate(${(fx.params.amount ?? 1).toFixed(3)})`);
+        break;
+      case 'duotone': {
+        const s = fx.params.strength ?? 1;
+        parts.push(
+          `grayscale(1) sepia(1) hue-rotate(${(fx.params.hue ?? 200).toFixed(0)}deg) saturate(${(2 * s).toFixed(2)}) contrast(${(1 + 0.1 * s).toFixed(2)})`,
+        );
+        break;
+      }
       case 'sharpen': {
         const url = ensureSharpen();
         if (url) {
@@ -219,8 +232,155 @@ function drawOverlayEffects(
         ctx.fillRect(0, 0, w, h);
       }
       ctx.restore();
+    } else if (fx.type === 'scanlines') {
+      const amount = Math.min(1, fx.params.amount ?? 0.35);
+      const size = Math.max(1, Math.round(fx.params.size ?? 2));
+      ctx.save();
+      ctx.globalAlpha = amount;
+      ctx.fillStyle = '#000';
+      for (let y = 0; y < h; y += size * 2) ctx.fillRect(0, y, w, size);
+      ctx.restore();
+    } else if (fx.type === 'pixelate') {
+      const block = Math.max(2, Math.round(fx.params.size ?? 12));
+      const sw = Math.max(1, Math.round(w / block));
+      const sh = Math.max(1, Math.round(h / block));
+      const tmp = freshCanvas(sw, sh);
+      const tctx = tmp.getContext('2d')!;
+      tctx.drawImage(ctx.canvas, 0, 0, sw, sh);
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp, 0, 0, sw, sh, 0, 0, w, h);
+      ctx.restore();
+    } else if (fx.type === 'mirror') {
+      const axis = Math.round(fx.params.axis ?? 0);
+      const snap = snapshot(ctx, w, h);
+      ctx.save();
+      ctx.beginPath();
+      if (axis === 0) {
+        ctx.rect(w / 2, 0, w / 2, h);
+        ctx.clip();
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+      } else if (axis === 1) {
+        ctx.rect(0, 0, w / 2, h);
+        ctx.clip();
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+      } else if (axis === 2) {
+        ctx.rect(0, h / 2, w, h / 2);
+        ctx.clip();
+        ctx.translate(0, h);
+        ctx.scale(1, -1);
+      } else {
+        ctx.rect(0, 0, w, h / 2);
+        ctx.clip();
+        ctx.translate(0, h);
+        ctx.scale(1, -1);
+      }
+      ctx.drawImage(snap, 0, 0);
+      ctx.restore();
+    } else if (fx.type === 'chromatic') {
+      const off = fx.params.amount ?? 5;
+      if (off > 0.1) {
+        const snap = snapshot(ctx, w, h);
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.5;
+        drawTinted(ctx, snap, w, h, -off, 0, 'rgb(255,0,0)');
+        drawTinted(ctx, snap, w, h, off, 0, 'rgb(0,0,255)');
+        drawTinted(ctx, snap, w, h, 0, 0, 'rgb(0,255,0)');
+        ctx.restore();
+      }
+    } else if (fx.type === 'blur-direction') {
+      const len = fx.params.amount ?? 12;
+      if (len > 0.5) {
+        const ang = ((fx.params.angle ?? 0) * Math.PI) / 180;
+        const dx = Math.cos(ang);
+        const dy = Math.sin(ang);
+        const snap = snapshot(ctx, w, h);
+        ctx.save();
+        ctx.globalAlpha = 0.32;
+        for (let i = 1; i <= 4; i++) {
+          const d = (len * i) / 4;
+          ctx.drawImage(snap, dx * d, dy * d);
+          ctx.drawImage(snap, -dx * d, -dy * d);
+        }
+        ctx.restore();
+      }
+    } else if (fx.type === 'bloom') {
+      const amount = Math.min(1, fx.params.amount ?? 0.5);
+      const radius = fx.params.radius ?? 18;
+      if (amount > 0.01) {
+        const glow = freshCanvas(w, h);
+        const gctx = glow.getContext('2d')!;
+        gctx.filter = `brightness(1.4) contrast(1.3) blur(${radius}px)`;
+        gctx.drawImage(ctx.canvas, 0, 0);
+        gctx.filter = 'none';
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = amount;
+        ctx.drawImage(glow, 0, 0);
+        ctx.restore();
+      }
+    } else if (fx.type === 'vhs') {
+      const amount = Math.min(1, fx.params.amount ?? 0.5);
+      const snap = snapshot(ctx, w, h);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.4 * amount;
+      drawTinted(ctx, snap, w, h, -3 * amount, 0, 'rgb(255,0,0)');
+      drawTinted(ctx, snap, w, h, 3 * amount, 0, 'rgb(0,120,255)');
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.3 * amount;
+      ctx.fillStyle = '#000';
+      for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+      ctx.restore();
+      const tile = grainTile(seed);
+      const pat = ctx.createPattern(tile, 'repeat');
+      if (pat) {
+        ctx.save();
+        ctx.globalAlpha = 0.18 * amount;
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.fillStyle = pat;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
     }
   }
+}
+
+/** A brand-new detached canvas — safe for effect temporaries (no aliasing). */
+function freshCanvas(w: number, h: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  return c;
+}
+
+/** A copy of the current composited frame. */
+function snapshot(ctx: CanvasRenderingContext2D, w: number, h: number): HTMLCanvasElement {
+  const c = freshCanvas(w, h);
+  c.getContext('2d')!.drawImage(ctx.canvas, 0, 0);
+  return c;
+}
+
+function drawTinted(
+  ctx: CanvasRenderingContext2D,
+  src: HTMLCanvasElement,
+  w: number,
+  h: number,
+  dx: number,
+  dy: number,
+  tint: string,
+): void {
+  const t = freshCanvas(w, h);
+  const tc = t.getContext('2d')!;
+  tc.drawImage(src, 0, 0);
+  tc.globalCompositeOperation = 'multiply';
+  tc.fillStyle = tint;
+  tc.fillRect(0, 0, w, h);
+  ctx.drawImage(t, dx, dy);
 }
 
 let grainCanvas: HTMLCanvasElement | null = null;
@@ -342,6 +502,91 @@ function compositeTransition(
       ctx.translate(w / 2, h / 2);
       ctx.scale(s, s);
       ctx.drawImage(b, -w / 2, -h / 2);
+      ctx.restore();
+      break;
+    }
+    case 'circle': {
+      ctx.drawImage(a, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      const r = Math.hypot(w, h) * 0.5 * prog;
+      ctx.arc(w / 2, h / 2, Math.max(0, r), 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(b, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 'push': {
+      const dir = String(params.direction ?? 'left');
+      if (dir === 'left') {
+        ctx.drawImage(a, -w * prog, 0);
+        ctx.drawImage(b, w * (1 - prog), 0);
+      } else if (dir === 'right') {
+        ctx.drawImage(a, w * prog, 0);
+        ctx.drawImage(b, -w * (1 - prog), 0);
+      } else if (dir === 'up') {
+        ctx.drawImage(a, 0, -h * prog);
+        ctx.drawImage(b, 0, h * (1 - prog));
+      } else {
+        ctx.drawImage(a, 0, h * prog);
+        ctx.drawImage(b, 0, -h * (1 - prog));
+      }
+      break;
+    }
+    case 'blur': {
+      const k = Math.sin(prog * Math.PI) * 24;
+      ctx.save();
+      ctx.filter = `blur(${k.toFixed(1)}px)`;
+      ctx.drawImage(a, 0, 0);
+      ctx.globalAlpha = prog;
+      ctx.drawImage(b, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 'flash': {
+      ctx.drawImage(prog < 0.5 ? a : b, 0, 0);
+      ctx.save();
+      ctx.globalAlpha = 1 - Math.abs(prog - 0.5) * 2;
+      ctx.fillStyle = String(params.color ?? '#ffffff');
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+      break;
+    }
+    case 'pixelate': {
+      const from = prog < 0.5 ? a : b;
+      const k = 1 - Math.abs(prog - 0.5) * 2; // 0..1..0
+      const block = Math.max(1, Math.round(2 + k * 60));
+      const sw = Math.max(1, Math.round(w / block));
+      const sh = Math.max(1, Math.round(h / block));
+      const tmp = document.createElement('canvas');
+      tmp.width = sw;
+      tmp.height = sh;
+      tmp.getContext('2d')!.drawImage(from, 0, 0, sw, sh);
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp, 0, 0, sw, sh, 0, 0, w, h);
+      ctx.restore();
+      if (prog > 0.5 && k < 0.05) ctx.drawImage(b, 0, 0);
+      break;
+    }
+    case 'spin': {
+      ctx.drawImage(a, 0, 0);
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate((1 - prog) * Math.PI * 0.5);
+      const s = 0.4 + 0.6 * prog;
+      ctx.scale(s, s);
+      ctx.globalAlpha = prog;
+      ctx.drawImage(b, -w / 2, -h / 2);
+      ctx.restore();
+      break;
+    }
+    case 'whip': {
+      const slide = (1 - prog) * w;
+      ctx.save();
+      ctx.filter = `blur(${(Math.sin(prog * Math.PI) * 18).toFixed(1)}px)`;
+      ctx.drawImage(a, -w * prog, 0);
+      ctx.drawImage(b, w - slide, 0);
       ctx.restore();
       break;
     }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useProjectStore } from '@/state/projectStore';
 import { useUIStore } from '@/state/uiStore';
 import type { SilenceMode } from '@/audio/silence';
+import { SoundBank } from './SoundBank';
 
 /** Track mixer + local audio cleanup (spec §53, §47, §228). */
 export function AudioPanel() {
@@ -57,6 +58,8 @@ export function AudioPanel() {
           </div>
         )}
       </div>
+
+      <SoundBank />
 
       <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
         Track mixer. Per-clip gain, pan and fades live in the Inspector; EQ, compression and

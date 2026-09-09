@@ -23,12 +23,15 @@ Follow the ComfyUI install for your OS, then add a video model. Pick by VRAM:
 
 | model | VRAM | licence | notes |
 | --- | --- | --- | --- |
-| **LTX-Video 2B** | ~12 GB (runs on Apple Silicon) | OpenRAIL-M | fastest practical local T2V/I2V |
-| **Wan 2.1 1.3B** | ~8 GB | Apache-2.0 | most permissive, modest GPUs |
+| **LTX-2** ([github.com/Lightricks/LTX-2](https://github.com/Lightricks/LTX-2)) | 12–24 GB depending on variant | open weights (LTX Open) | **recommended** — current Lightricks open T2V/I2V, strong image-to-video; free and unlimited on your own GPU |
+| **LTX-Video 2B / 13B v0.9.x** | ~12 GB (runs on Apple Silicon) | OpenRAIL-M | previous LTX line, lighter |
+| **Wan 2.1 / 2.2** | ~8 GB (1.3B) | Apache-2.0 | most permissive, modest GPUs |
 | **HunyuanVideo** | 45 GB+ | Tencent Community | highest quality, NVIDIA-class only |
 
-The ComfyUI "workflow templates" browser ships a ready graph for each of these.
-Load one and confirm it renders a clip inside ComfyUI **before** wiring it here.
+The ComfyUI "workflow templates" browser ships a ready graph for LTX-2 and the
+others (search "LTX"). Load one and confirm it renders a clip inside ComfyUI
+**before** wiring it here. No GPU? The same LTX-2 model is on fal.ai — enable
+the **fal.ai** backend in AI Setup instead (pay-as-you-go, your key).
 
 ## 2. Start ComfyUI so the browser can reach it
 

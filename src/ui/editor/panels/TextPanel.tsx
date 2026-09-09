@@ -3,6 +3,7 @@ import { useProjectStore } from '@/state/projectStore';
 import { formatClock } from '@/lib/time';
 import type { CaptionPreset } from '@/domain/types';
 import { TranscribeControls } from './TranscribeControls';
+import { VoiceOver } from './VoiceOver';
 
 const PRESETS: CaptionPreset[] = ['minimal', 'bold', 'boxed', 'karaoke'];
 
@@ -171,6 +172,8 @@ export function TextPanel() {
           </div>
         </>
       )}
+
+      <VoiceOver />
     </div>
   );
 }
